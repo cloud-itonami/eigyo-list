@@ -3,3 +3,4 @@
 {:event :harvest, :cells ["jp-tokyo-shinjuku"], :measured 1, :failed [], :leads 3554, :at "2026-08-27T06:08:37.075Z"}
 {:event :harvest, :cells ["us-newyork-midtown" "us-chicago-loop" "us-losangeles-downtown" "ca-toronto-downtown" "mx-cdmx-centro" "br-saopaulo-centro" "ar-buenosaires-centro" "cl-santiago-centro" "co-bogota-centro" "pe-lima-miraflores" "au-sydney-cbd" "au-melbourne-cbd" "nz-auckland-cbd"], :measured 13, :failed [], :leads 34388, :at "2026-08-27T06:27:46.174Z"}
 {:event :harvest, :cells ["ke-nairobi-cbd"], :measured 1, :failed [], :leads 581, :at "2026-08-27T07:58:05.045Z"}
+{:event :harvest, :cells ["at-wien-innere"], :measured 1, :failed [], :leads 9731, :at "2026-08-27T08:08:00.601Z"}

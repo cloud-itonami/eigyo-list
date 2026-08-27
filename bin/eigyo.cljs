@@ -113,13 +113,15 @@
                                       (take 50 (sort-by (comp - val) (:declared-misses rec))))
                :declared-misses-total (count (:declared-misses rec))))))
 
+(defn- receipt-of [cell-id]
+  (let [f (receipt-file cell-id)] (when (exists? f) (slurp-edn f))))
+
 (defn- receipt-at
-  "その区画を最後に測った時刻。**receipt から読む（2 KB）** —— 名簿本体は
+  "その区画を最後に**測れた**時刻（失敗した周は入らない）。**receipt から読む（2 KB）** —— 名簿本体は
   1 区画 2〜4 MB で、127 区画ぶんを時刻 1 つのために読むと数分かかる
   （実測 2026-08-27: `--stale` が最初の 1 行を出すまで無音で数分止まった）。"
   [cell-id]
-  (let [f (receipt-file cell-id)]
-    (when (exists? f) (:harvested-at (slurp-edn f)))))
+  (:harvested-at (receipt-of cell-id)))
 
 (defn- harvested
   "**読めなかったファイルを『まだ収集していない』として返さない。** 前者は
@@ -174,7 +176,20 @@
                      (write-edn! (receipt-file (:cell/id cell)) (receipt rec))
                      {:cell cell :status :measured :rec rec})))
           (.catch (fn [e]
-                    {:cell cell :status :failed :error (cov/error-detail e)}))))))
+                    (let [detail (cov/error-detail e)]
+                      ;; **失敗も receipt に書く。** 書かないと、その区画は
+                      ;; 「まだ引いていない（planned）」と区別が付かない ——
+                      ;; 引いて失敗したことは、引いていないこととは別の事実で、
+                      ;; 前者は上流が壊れているか絞られていることを意味する
+                      ;; （実測 2026-08-27: 502/500 で落ちた 2 区画が planned として
+                      ;; 数えられていた）。
+                      (write-edn! (receipt-file (:cell/id cell))
+                                  {:cell/id (:cell/id cell)
+                                   :cell/country (:cell/country cell)
+                                   :status :failed
+                                   :error detail
+                                   :attempted-at (now)})
+                      {:cell cell :status :failed :error detail})))))))
 
 (defn- stalest
   "測定が古い順に n 件。**未測定を先頭に置く。** 常駐が毎日全区画を舐めると
@@ -247,12 +262,16 @@
          (let [h (harvested (:cell/id cell))]
            (cov/coverage-row
             cell
-            (cond
-              (false? (:cell/enabled? cell)) {:status :disabled}
-              h {:status :measured :raw-count (:raw-count h) :leads (count (:leads h))
-                 :refused (:refused h) :declared-misses (:declared-misses h)
-                 :crosswalk (:crosswalk h) :at (:harvested-at h)}
-              :else {:status :planned}))))))
+            (let [r (receipt-of (:cell/id cell))]
+              (cond
+                (false? (:cell/enabled? cell)) {:status :disabled}
+                h {:status :measured :raw-count (:raw-count h) :leads (count (:leads h))
+                   :refused (:refused h) :declared-misses (:declared-misses h)
+                   :crosswalk (:crosswalk h) :at (:harvested-at h)}
+                ;; 引いて失敗した。**planned ではない。**
+                (= :failed (:status r)) {:status :failed :error (:error r)
+                                         :at (:attempted-at r)}
+                :else {:status :planned})))))))
 
 (defn- segment-rows
   "ISIC ごとの 1 行。**営業の入口はここ** —— どの業種に何件居て、その業種の
