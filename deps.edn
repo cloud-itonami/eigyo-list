@@ -1,0 +1,6 @@
+;; eigyo-list — 純 .cljc の domain + nbb の収集器。third-party 依存なし。
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.0"}
+        io.github.kotoba-lang/org-openstreetmap-overpass
+        {:local/root "../../kotoba-lang/org-openstreetmap-overpass"}}
+ :aliases {:test {:extra-paths ["test"]}}}

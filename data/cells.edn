@@ -1,0 +1,76 @@
+;; 収集する区画。**宣言する。導出しない。**
+;;
+;; 1 区画 = 1 都市の中心部（中心座標 + 半径）。bbox は
+;; `eigyo-list.coverage/cell->bbox` が導出する —— 経度の長さは緯度で変わるので、
+;; 同じ度数の箱を置くと面積が緯度の関数になる（それは地球の形の話なので導出する）。
+;;
+;; **この一覧は『全世界』ではない。都市中心部の標本である。**
+;; 世界の事業者の網羅を主張したい日が来たら、それは Overpass ではなく
+;; planet 抽出（Geofabrik の .osm.pbf）の仕事で、この repo にその読み手は無い。
+;; 引いていない区画は coverage 表で `planned` として出る —— 0 件ではない。
+;;
+;; 増やすときは 1 都市ずつ、前の周で実際に何件受理されたか（journal）を見てから。
+;; Overpass は無償の共有インフラで、こちらの都合で広域を舐めてよい相手ではない。
+
+{:cells
+ [;; ── 東アジア・東南アジア ────────────────────────────────────────────────
+  {:cell/id "jp-tokyo-shinjuku"      :cell/country "JP" :cell/region "asia-pacific" :cell/center [35.6938 139.7034] :cell/label "東京・新宿"}
+  {:cell/id "jp-osaka-umeda"         :cell/country "JP" :cell/region "asia-pacific" :cell/center [34.7024 135.4959] :cell/label "大阪・梅田"}
+  {:cell/id "kr-seoul-gangnam"       :cell/country "KR" :cell/region "asia-pacific" :cell/center [37.4979 127.0276] :cell/label "Seoul Gangnam"}
+  {:cell/id "tw-taipei-xinyi"        :cell/country "TW" :cell/region "asia-pacific" :cell/center [25.0330 121.5654] :cell/label "Taipei Xinyi"}
+  {:cell/id "hk-hongkong-central"    :cell/country "HK" :cell/region "asia-pacific" :cell/center [22.2819 114.1585] :cell/label "Hong Kong Central"}
+  {:cell/id "sg-singapore-cbd"       :cell/country "SG" :cell/region "asia-pacific" :cell/center [1.2830 103.8510]  :cell/label "Singapore CBD"}
+  {:cell/id "th-bangkok-siam"        :cell/country "TH" :cell/region "asia-pacific" :cell/center [13.7460 100.5340] :cell/label "Bangkok Siam"}
+  {:cell/id "vn-hochiminh-d1"        :cell/country "VN" :cell/region "asia-pacific" :cell/center [10.7769 106.7009] :cell/label "Ho Chi Minh City D1"}
+  {:cell/id "id-jakarta-sudirman"    :cell/country "ID" :cell/region "asia-pacific" :cell/center [-6.2250 106.8100] :cell/label "Jakarta Sudirman"}
+  {:cell/id "my-kualalumpur-klcc"    :cell/country "MY" :cell/region "asia-pacific" :cell/center [3.1570 101.7120]  :cell/label "Kuala Lumpur KLCC"}
+  {:cell/id "ph-manila-makati"       :cell/country "PH" :cell/region "asia-pacific" :cell/center [14.5547 121.0244] :cell/label "Metro Manila Makati"}
+
+  ;; ── 南アジア・中東 ──────────────────────────────────────────────────────
+  {:cell/id "in-mumbai-fort"         :cell/country "IN" :cell/region "south-asia"  :cell/center [18.9330 72.8330]   :cell/label "Mumbai Fort"}
+  {:cell/id "in-delhi-connaught"     :cell/country "IN" :cell/region "south-asia"  :cell/center [28.6330 77.2190]   :cell/label "Delhi Connaught Place"}
+  {:cell/id "ae-dubai-downtown"      :cell/country "AE" :cell/region "middle-east" :cell/center [25.1972 55.2744]   :cell/label "Dubai Downtown"}
+  {:cell/id "sa-riyadh-olaya"        :cell/country "SA" :cell/region "middle-east" :cell/center [24.6940 46.6850]   :cell/label "Riyadh Olaya"}
+  {:cell/id "tr-istanbul-sisli"      :cell/country "TR" :cell/region "middle-east" :cell/center [41.0500 28.9870]   :cell/label "Istanbul Şişli"}
+  {:cell/id "il-telaviv-center"      :cell/country "IL" :cell/region "middle-east" :cell/center [32.0730 34.7800]   :cell/label "Tel Aviv Center"}
+
+  ;; ── アフリカ ────────────────────────────────────────────────────────────
+  {:cell/id "eg-cairo-downtown"      :cell/country "EG" :cell/region "africa" :cell/center [30.0450 31.2350]  :cell/label "Cairo Downtown"}
+  {:cell/id "ng-lagos-victoria"      :cell/country "NG" :cell/region "africa" :cell/center [6.4300 3.4200]    :cell/label "Lagos Victoria Island"}
+  {:cell/id "ke-nairobi-cbd"         :cell/country "KE" :cell/region "africa" :cell/center [-1.2840 36.8220]  :cell/label "Nairobi CBD"}
+  {:cell/id "za-johannesburg-sandton" :cell/country "ZA" :cell/region "africa" :cell/center [-26.1070 28.0560] :cell/label "Johannesburg Sandton"}
+  {:cell/id "ma-casablanca-center"   :cell/country "MA" :cell/region "africa" :cell/center [33.5930 -7.6180]  :cell/label "Casablanca Centre"}
+
+  ;; ── ヨーロッパ ──────────────────────────────────────────────────────────
+  {:cell/id "gb-london-city"         :cell/country "GB" :cell/region "europe" :cell/center [51.5140 -0.0900]  :cell/label "City of London"}
+  {:cell/id "fr-paris-centre"        :cell/country "FR" :cell/region "europe" :cell/center [48.8680 2.3400]   :cell/label "Paris centre"}
+  {:cell/id "de-berlin-mitte"        :cell/country "DE" :cell/region "europe" :cell/center [52.5200 13.4050]  :cell/label "Berlin Mitte"}
+  {:cell/id "de-munich-centre"       :cell/country "DE" :cell/region "europe" :cell/center [48.1370 11.5750]  :cell/label "München Zentrum"}
+  {:cell/id "nl-amsterdam-centrum"   :cell/country "NL" :cell/region "europe" :cell/center [52.3730 4.8930]   :cell/label "Amsterdam Centrum"}
+  {:cell/id "es-madrid-centro"       :cell/country "ES" :cell/region "europe" :cell/center [40.4180 -3.7030]  :cell/label "Madrid Centro"}
+  {:cell/id "it-milano-centro"       :cell/country "IT" :cell/region "europe" :cell/center [45.4670 9.1900]   :cell/label "Milano centro"}
+  {:cell/id "se-stockholm-norrmalm"  :cell/country "SE" :cell/region "europe" :cell/center [59.3330 18.0640]  :cell/label "Stockholm Norrmalm"}
+  {:cell/id "pl-warszawa-srodmiescie" :cell/country "PL" :cell/region "europe" :cell/center [52.2300 21.0100] :cell/label "Warszawa Śródmieście"}
+  {:cell/id "ch-zurich-centre"       :cell/country "CH" :cell/region "europe" :cell/center [47.3740 8.5400]   :cell/label "Zürich Zentrum"}
+  {:cell/id "ie-dublin-centre"       :cell/country "IE" :cell/region "europe" :cell/center [53.3480 -6.2600]  :cell/label "Dublin centre"}
+  {:cell/id "pt-lisboa-baixa"        :cell/country "PT" :cell/region "europe" :cell/center [38.7130 -9.1400]  :cell/label "Lisboa Baixa"}
+
+  ;; ── 北米 ────────────────────────────────────────────────────────────────
+  {:cell/id "us-newyork-midtown"     :cell/country "US" :cell/region "north-america" :cell/center [40.7540 -73.9840]  :cell/label "New York Midtown"}
+  {:cell/id "us-sanfrancisco-soma"   :cell/country "US" :cell/region "north-america" :cell/center [37.7860 -122.4050] :cell/label "San Francisco SoMa"}
+  {:cell/id "us-chicago-loop"        :cell/country "US" :cell/region "north-america" :cell/center [41.8830 -87.6300]  :cell/label "Chicago Loop"}
+  {:cell/id "us-losangeles-downtown" :cell/country "US" :cell/region "north-america" :cell/center [34.0480 -118.2500] :cell/label "Los Angeles Downtown"}
+  {:cell/id "ca-toronto-downtown"    :cell/country "CA" :cell/region "north-america" :cell/center [43.6510 -79.3830]  :cell/label "Toronto Downtown"}
+
+  ;; ── ラテンアメリカ ──────────────────────────────────────────────────────
+  {:cell/id "mx-cdmx-centro"         :cell/country "MX" :cell/region "latin-america" :cell/center [19.4330 -99.1400] :cell/label "Ciudad de México Centro"}
+  {:cell/id "br-saopaulo-centro"     :cell/country "BR" :cell/region "latin-america" :cell/center [-23.5500 -46.6350] :cell/label "São Paulo centro"}
+  {:cell/id "ar-buenosaires-centro"  :cell/country "AR" :cell/region "latin-america" :cell/center [-34.6040 -58.3800] :cell/label "Buenos Aires centro"}
+  {:cell/id "cl-santiago-centro"     :cell/country "CL" :cell/region "latin-america" :cell/center [-33.4380 -70.6500] :cell/label "Santiago centro"}
+  {:cell/id "co-bogota-centro"       :cell/country "CO" :cell/region "latin-america" :cell/center [4.6100 -74.0700]  :cell/label "Bogotá centro"}
+  {:cell/id "pe-lima-miraflores"     :cell/country "PE" :cell/region "latin-america" :cell/center [-12.1200 -77.0300] :cell/label "Lima Miraflores"}
+
+  ;; ── オセアニア ──────────────────────────────────────────────────────────
+  {:cell/id "au-sydney-cbd"          :cell/country "AU" :cell/region "oceania" :cell/center [-33.8690 151.2080] :cell/label "Sydney CBD"}
+  {:cell/id "au-melbourne-cbd"       :cell/country "AU" :cell/region "oceania" :cell/center [-37.8140 144.9630] :cell/label "Melbourne CBD"}
+  {:cell/id "nz-auckland-cbd"        :cell/country "NZ" :cell/region "oceania" :cell/center [-36.8490 174.7630] :cell/label "Auckland CBD"}]}

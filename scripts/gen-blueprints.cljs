@@ -1,0 +1,40 @@
+#!/usr/bin/env nbb
+(ns gen-blueprints
+  "west.yml → `data/blueprints.edn`（cloud-itonami が blueprint repo を持つ ISIC 符号）。
+
+  **生成物。手で編集しない。** 名前から組み立てて『在るはず』としないための表で、
+  出所は superproject の manifest。`--check` は書かずに差分だけ報告する。
+
+  exit: 0 一致 / 1 差分あり（--check 時）/ 2 manifest を読めなかった。"
+  (:require ["fs" :as fs] ["path" :as path] [clojure.string :as str]))
+
+(def repo-root (path/resolve (path/dirname (path/dirname (nth (vec js/process.argv) 2)))))
+(def root (or (some-> (.-FLEET_ROOT js/process.env) not-empty)
+              (path/resolve repo-root ".." ".." "..")))
+(def west (path/join root "manifest" "west.yml"))
+(def out (path/join repo-root "data" "blueprints.edn"))
+
+(when-not (fs/existsSync west)
+  (println (str "no manifest at " west " -- set FLEET_ROOT. Cannot answer which blueprints exist."))
+  (js/process.exit 2))
+
+(let [codes (->> (str/split (fs/readFileSync west "utf8") #"\n")
+                 (keep #(second (re-find #"name:\s*cloud-itonami-isic-([0-9]+)\s*$" %)))
+                 (into (sorted-set)))
+      check? (some #{"--check"} (vec js/process.argv))
+      data {:generated-by "scripts/gen-blueprints.cljs"
+            :source "com-junkawasaki/root manifest/west.yml"
+            :note "cloud-itonami が blueprint repo を持つ ISIC 符号。手で編集しない。"
+            :count (count codes)
+            :isic-codes (vec codes)}]
+  (when (zero? (count codes))
+    (println "0 blueprint repos found in west.yml -- refusing to write an empty table")
+    (js/process.exit 2))
+  (if check?
+    (let [old (when (fs/existsSync out) (fs/readFileSync out "utf8"))
+          new (with-out-str (prn data))]
+      (if (= old new)
+        (do (println (str "FRESH\t" (count codes) " isic blueprints")) (js/process.exit 0))
+        (do (println (str "STALE\t" (count codes) " in west.yml; data/blueprints.edn differs")) (js/process.exit 1))))
+    (do (fs/writeFileSync out (with-out-str (prn data)))
+        (println (str "wrote " out "  " (count codes) " isic codes")))))

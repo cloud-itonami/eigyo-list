@@ -1,0 +1,25 @@
+eigyo-list — data provenance and licence
+
+CODE
+  MIT (see LICENSE).
+
+DATA
+  The lead corpus, the coverage table and the segment table are derived from
+  OpenStreetMap.
+
+    (c) OpenStreetMap contributors — https://www.openstreetmap.org/copyright
+    Licensed under the Open Database License (ODbL) 1.0
+    https://opendatacommons.org/licenses/odbl/1-0/
+
+  Every row carries `source = openstreetmap`, `license = ODbL-1.0` and an
+  `osm_url` that points at the element it was read from, so any single fact in
+  this corpus can be checked against — and corrected in — the upstream map.
+
+  ODbL is share-alike: a Produced Work made from these rows must credit
+  OpenStreetMap, and a publicly distributed *derived database* must be offered
+  under ODbL. That obligation travels with the R2 Data Catalog tables
+  (`cloud_itonami.eigyo_lead` and siblings) if they are ever shared outside
+  this account, not only with the files in this repository.
+
+  Contact values (email addresses, telephone numbers) present in OpenStreetMap
+  are NOT copied into this corpus. See `src/eigyo_list/lead.cljc`.

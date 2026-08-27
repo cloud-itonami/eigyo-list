@@ -1,0 +1,6 @@
+# 名簿そのものは git に載せない。再収集で作り直せるもので、1 区画で数 MB になる。
+# 載るのは data/receipts/（何件見て何を落としたか + 集合の digest）と journal/。
+# 名簿の配り先は R2 Data Catalog の cloud_itonami.eigyo_lead。
+data/leads/
+node_modules/
+.DS_Store

@@ -1,0 +1,338 @@
+#!/usr/bin/env nbb
+(ns eigyo
+  "eigyo-list の唯一の外に出る場所。
+
+    eigyo cells                        区画の宣言と、いま何が測れているか
+    eigyo harvest [--cell id]… [--all] [--limit n] [--dry-run]
+    eigyo stats                        手元の名簿を数える
+    eigyo export [--out-dir /tmp]      lake へ載せる JSON と spec を書く
+    eigyo sync   [--out-dir /tmp] [--dry-run]   R2 Data Catalog へ載せる
+
+  exit: 0 ok / 1 拒否（引数・入力の不備）/ **2 答えられなかった**
+  （区画を 1 つも読めなかった、資格情報が無い、loader が居ない）。
+  2 が別にあるのは、読めなかった周を『0 件だった周』として記録しないため。"
+  (:require ["fs" :as fs]
+            ["path" :as path]
+            ["crypto" :as crypto]
+            ["child_process" :as cp]
+            [clojure.string :as str]
+            [clojure.edn :as edn]
+            [eigyo-list.crosswalk :as cw]
+            [eigyo-list.lead :as lead]
+            [eigyo-list.coverage :as cov]
+            [org-openstreetmap-overpass.core :as ov]
+            [org-openstreetmap-overpass.fetch :as ovf]))
+
+(def ^:private argv (vec js/process.argv))
+
+(def ^:private script-index
+  ;; nbb は ESM で走るので __filename が無く、**argv[2] でもない** ——
+  ;; `nbb --classpath X bin/eigyo.cljs cells` では argv[2] が `--classpath` に
+  ;; なる（実測 2026-08-27、この形で全コマンドが usage を出していた）。
+  ;; スクリプトは『最初の .cljs で終わる引数』として探す。
+  (or (first (keep-indexed (fn [i a] (when (str/ends-with? a ".cljs") i)) argv))
+      2))
+
+(def repo-root (path/resolve (path/dirname (path/dirname (nth argv script-index)))))
+(defn- p [& xs] (apply path/join repo-root xs))
+
+(def user-agent
+  "cloud-itonami/eigyo-list (business-directory survey for itonami.cloud; contact: jun@gftd.group)")
+
+(defn- now [] (.toISOString (js/Date.)))
+(defn- today [] (subs (now) 0 10))
+(defn- slurp-edn [f] (edn/read-string (fs/readFileSync f "utf8")))
+(defn- exists? [f] (fs/existsSync f))
+
+(defn- write-edn!
+  "**tmp へ書いて rename する。** 直接書くと、途中で落ちたとき（ディスクが
+  一杯・kill）に**半分書かれたファイル**が残り、それは完全なファイルと
+  見た目で区別が付かない —— 実測 2026-08-27、収集中に空きが尽きて 3 区画分の
+  名簿が途中で切れた。rename は同一 filesystem 上で atomic なので、
+  ファイルは『前の内容』か『新しい内容』のどちらかにしかならない。"
+  [f data]
+  (fs/mkdirSync (path/dirname f) #js {:recursive true})
+  (let [tmp (str f ".tmp")]
+    (fs/writeFileSync tmp (with-out-str (binding [*print-length* nil] (prn data))))
+    (fs/renameSync tmp f)))
+
+(defn- append-journal! [entry]
+  (let [f (p "journal" (str (today) ".edn"))]
+    (fs/mkdirSync (path/dirname f) #js {:recursive true})
+    (fs/appendFileSync f (str (pr-str (assoc entry :at (now))) "\n"))))
+
+(defn- cells [] (:cells (slurp-edn (p "data" "cells.edn"))))
+
+(defn- blueprints
+  "ISIC → blueprint 在り。無ければ **空集合ではなく nil** を返し、呼び出し側が
+  『突き合わせていない』と申告できるようにする。空集合にすると『どの符号にも
+  blueprint が無い』と区別が付かない。"
+  []
+  (let [f (p "data" "blueprints.edn")]
+    (when (exists? f) (into #{} (:isic-codes (slurp-edn f))))))
+
+(defn- lead-file [cell-id] (p "data" "leads" (str cell-id ".edn")))
+(defn- receipt-file [cell-id] (p "data" "receipts" (str cell-id ".edn")))
+
+(defn- sha256 [s]
+  (-> (crypto/createHash "sha256") (.update s "utf8") (.digest "hex")))
+
+(defn- receipt
+  "git に載る側。**名簿そのものは載せない**（1 区画で数 MB、48 区画で 100 MB 級に
+  なり、clone のたびに再生成できるものを配ることになる）。載せるのは測定の
+  receipt —— 何件見て、何件をどの理由で落として、残った集合の digest は何か。
+
+  digest が在るので、再収集が同じ集合を出したかを 1 行で照合できる。
+  `declared-misses` は crosswalk の穴そのものなので上位 50 件を残す
+  （表を育てるときに読む唯一の入力）。"
+  [rec]
+  (let [leads (:leads rec)]
+    (-> rec
+        (dissoc :leads)
+        (assoc :leads-count (count leads)
+               :leads-sha256 (sha256 (pr-str (mapv :lead/id leads)))
+               :isic-histogram (into (sorted-map) (frequencies (map :lead/isic leads)))
+               :declared-misses (into (sorted-map)
+                                      (take 50 (sort-by (comp - val) (:declared-misses rec))))
+               :declared-misses-total (count (:declared-misses rec))))))
+
+(defn- harvested
+  "**読めなかったファイルを『まだ収集していない』として返さない。** 前者は
+  planned に、後者も planned に見えるので、区別が付かないまま 1 区画ぶんの
+  名簿が黙って表から消える。読めなければその場で止める。"
+  [cell-id]
+  (let [f (lead-file cell-id)]
+    (when (exists? f)
+      (try (slurp-edn f)
+           (catch :default e
+             (println (str "UNREADABLE " f " -- " (.-message e)
+                           "\n  delete it and re-harvest that cell. Refusing to treat it as unharvested."))
+             (js/process.exit 2))))))
+
+;; ── harvest ───────────────────────────────────────────────────────────────
+
+(defn- harvest-cell!
+  "1 区画を引いて保存する。**分類は Overpass の応答からではなくタグから**
+  （`:classify` は座標を持つ element を全部通す。業種の判定は `lead` 側で
+  行い、落ちた理由をこちらが数えるため —— 上流で落とすと `:unclassified` に
+  丸まって理由が消える）。"
+  [cell dry-run?]
+  (let [bbox (cov/cell->bbox cell)
+        q (ov/ql bbox {:selectors (cw/selectors) :nwr? true :timeout 90})]
+    (if dry-run?
+      (js/Promise.resolve {:cell cell :status :dry-run :ql q})
+      (-> (ovf/post-ql q {:user-agent user-agent
+                          :min-interval-ms 1500
+                          :parse-opts {:classify (constantly :business)
+                                       :attr :obs/kind}})
+          (.then (fn [{:keys [observations raw-count unclassified]}]
+                   (let [{:keys [leads refused declared-misses]}
+                         (lead/observations->leads observations cell)
+                         rec {:cell/id (:cell/id cell)
+                              :cell/country (:cell/country cell)
+                              :harvested-at (now)
+                              :raw-count raw-count
+                              :no-coords unclassified
+                              :refused refused
+                              :declared-misses declared-misses
+                              :leads leads}]
+                     (write-edn! (lead-file (:cell/id cell)) rec)
+                     (write-edn! (receipt-file (:cell/id cell)) (receipt rec))
+                     {:cell cell :status :measured :rec rec})))
+          (.catch (fn [e]
+                    {:cell cell :status :failed
+                     :error (or (some-> (ex-data e) pr-str) (.-message e))}))))))
+
+(defn- harvest! [opts]
+  (let [all (cov/enabled-cells (cells))
+        want (:cell-ids opts)
+        chosen (cond->> all
+                 (seq want) (filterv #(contains? want (:cell/id %)))
+                 (:limit opts) (take (:limit opts))
+                 true vec)]
+    (if (empty? chosen)
+      (do (println "no cell selected -- refusing to report a pass") (js/process.exit 1))
+      (do
+        (println (str "harvest " (count chosen) " cell(s)"
+                      (when (:dry-run opts) "  [dry-run]")))
+        (-> (reduce (fn [pr cell]
+                      (.then pr (fn [acc]
+                                  (.then (harvest-cell! cell (:dry-run opts))
+                                         (fn [r]
+                                           (let [{:keys [status rec error]} r]
+                                             (println
+                                              (str "  " (name status) "\t" (:cell/id cell)
+                                                   "\t" (or (some-> rec :raw-count (str " elements")) "")
+                                                   (when rec (str "\t" (count (:leads rec)) " leads"))
+                                                   (when error (str "\t" error)))))
+                                           (conj acc r))))))
+                    (js/Promise.resolve [])
+                    chosen)
+            (.then (fn [rs]
+                     (let [measured (filterv #(= :measured (:status %)) rs)
+                           failed (filterv #(= :failed (:status %)) rs)
+                           leads (reduce + 0 (map #(count (get-in % [:rec :leads])) measured))]
+                       (append-journal! {:event :harvest
+                                         :cells (mapv #(get-in % [:cell :cell/id]) rs)
+                                         :measured (count measured)
+                                         :failed (mapv (fn [f] [(get-in f [:cell :cell/id]) (:error f)]) failed)
+                                         :leads leads})
+                       (println (str "\nmeasured " (count measured) "  failed " (count failed)
+                                     "  leads " leads))
+                       (when (seq failed)
+                         (println "SOME CELLS WERE NOT READ -- that is not an observation of nothing"))
+                       (js/process.exit (cond (seq failed) 2
+                                              (zero? (count measured)) 2
+                                              :else 0))))))))))
+
+;; ── 表を組む ──────────────────────────────────────────────────────────────
+
+(defn- all-harvests [] (keep #(harvested (:cell/id %)) (cells)))
+
+(defn- lead-rows [bps]
+  (vec (for [h (all-harvests)
+             l (:leads h)]
+         (lead/lead->row l {:blueprints (or bps #{}) :harvested-at (:harvested-at h)}))))
+
+(defn- coverage-rows []
+  (vec (for [cell (cells)]
+         (let [h (harvested (:cell/id cell))]
+           (cov/coverage-row
+            cell
+            (cond
+              (false? (:cell/enabled? cell)) {:status :disabled}
+              h {:status :measured :raw-count (:raw-count h) :leads (count (:leads h))
+                 :refused (:refused h) :declared-misses (:declared-misses h)
+                 :at (:harvested-at h)}
+              :else {:status :planned}))))))
+
+(defn- segment-rows
+  "ISIC ごとの 1 行。**営業の入口はここ** —— どの業種に何件居て、その業種の
+  blueprint が在るか。`blueprint_repo` が空の行は『リードは在るが提案する
+  ものがまだ無い』で、これは欠測ではなく品揃えの穴として読む。"
+  [rows bps]
+  (->> (group-by #(get % "isic") rows)
+       (map (fn [[isic rs]]
+              {"isic" isic
+               "isic_section" (cw/isic->section isic)
+               "blueprint_repo" (get (first rs) "blueprint_repo")
+               "leads" (str (count rs))
+               "with_site" (str (count (filter #(= "true" (get % "has_site")) rs)))
+               "with_email" (str (count (filter #(= "true" (get % "has_email")) rs)))
+               "with_phone" (str (count (filter #(= "true" (get % "has_phone")) rs)))
+               "chains" (str (count (filter #(= "true" (get % "chain")) rs)))
+               "countries" (str (count (into #{} (keep #(get % "country") rs))))
+               "example_lead" (get (first rs) "osm_url")
+               "blueprint_matched" (str (boolean (and bps (get (first rs) "blueprint_repo"))))}))
+       (sort-by #(- (parse-long (get % "leads"))))
+       vec))
+
+;; ── export / sync ─────────────────────────────────────────────────────────
+
+(defn- write-json! [f data]
+  (fs/writeFileSync f (js/JSON.stringify (clj->js data) nil 1)))
+
+(defn- export! [{:keys [out-dir]}]
+  (let [bps (blueprints)
+        rows (lead-rows bps)
+        cov-rows (coverage-rows)
+        segs (segment-rows rows bps)
+        spec {:namespace "cloud_itonami"
+              :tables [{:file "eigyo_lead.json" :table "eigyo_lead" :int_columns []}
+                       {:file "eigyo_coverage.json" :table "eigyo_coverage" :int_columns []}
+                       {:file "eigyo_segment.json" :table "eigyo_segment" :int_columns []}]}]
+    (when-not bps
+      (println "WARNING: data/blueprints.edn is absent -- blueprint_repo will be empty on every row."
+               "That is 'not matched', not 'no blueprint exists'."))
+    (fs/mkdirSync out-dir #js {:recursive true})
+    (write-json! (path/join out-dir "eigyo_lead.json") rows)
+    (write-json! (path/join out-dir "eigyo_coverage.json") cov-rows)
+    (write-json! (path/join out-dir "eigyo_segment.json") segs)
+    (write-json! (path/join out-dir "eigyo.spec.json") spec)
+    (println (str "SCANNED\t" (count rows) "\teigyo_lead"))
+    (println (str "SCANNED\t" (count cov-rows) "\teigyo_coverage"))
+    (println (str "SCANNED\t" (count segs) "\teigyo_segment"))
+    (println (cov/plan-note cov-rows))
+    (println (str "spec: " (path/join out-dir "eigyo.spec.json")))
+    (if (zero? (count rows))
+      (do (println "0 leads -- refusing to report a pass") 1)
+      0)))
+
+(defn- fleet-root []
+  (or (some-> (.-FLEET_ROOT js/process.env) not-empty)
+      (path/resolve repo-root ".." ".." "..")))
+
+(defn- sync! [{:keys [out-dir dry-run]}]
+  (let [code (export! {:out-dir out-dir})]
+    (if (pos? code)
+      code
+      (let [loader (path/join (fleet-root) "scripts" "datalake-sync.py")]
+        (if-not (exists? loader)
+          (do (println (str "no loader at " loader
+                            "\nset FLEET_ROOT to the superproject root."
+                            "\nThis run cannot answer whether the tables were written."))
+              2)
+          (let [args (cond-> ["--spec" (path/join out-dir "eigyo.spec.json") "--in-dir" out-dir]
+                       dry-run (conj "--dry-run"))
+                r (cp/spawnSync "python3" (clj->js (into [loader] args))
+                                #js {:stdio "inherit" :cwd (fleet-root)})]
+            (append-journal! {:event :sync :exit (.-status r) :dry-run (boolean dry-run)})
+            (or (.-status r) 2)))))))
+
+;; ── 表示 ──────────────────────────────────────────────────────────────────
+
+(defn- show-cells! []
+  (let [rows (coverage-rows)]
+    (doseq [r rows]
+      (println (str (.padEnd (get r "status") 9) (.padEnd (get r "cell") 26)
+                    (.padEnd (str (get r "country")) 4)
+                    (.padStart (str (or (get r "leads") "-")) 6) " leads  "
+                    (.padStart (str (or (get r "elements_seen") "-")) 6) " elements  "
+                    (get r "km2") " km2")))
+    (println)
+    (println (cov/plan-note rows))
+    (println (str "crosswalk: " (pr-str (cw/coverage))))))
+
+(defn- stats! []
+  (let [bps (blueprints)
+        rows (lead-rows bps)
+        segs (segment-rows rows bps)]
+    (println (str "leads " (count rows)
+                  "  isic " (count segs)
+                  "  countries " (count (into #{} (keep #(get % "country") rows)))
+                  "  with-site " (count (filter #(= "true" (get % "has_site")) rows))
+                  "  with-email " (count (filter #(= "true" (get % "has_email")) rows))
+                  "  with-phone " (count (filter #(= "true" (get % "has_phone")) rows))
+                  "  chains " (count (filter #(= "true" (get % "chain")) rows))))
+    (println "\ntop segments (leads / blueprint):")
+    (doseq [s (take 20 segs)]
+      (println (str "  " (.padEnd (get s "isic") 6) (.padStart (get s "leads") 6)
+                    "  " (or (get s "blueprint_repo") "-- no blueprint --"))))
+    (let [no-bp (filter #(nil? (get % "blueprint_repo")) segs)]
+      (println (str "\nsegments without a blueprint: " (count no-bp) "/" (count segs))))))
+
+;; ── argv ──────────────────────────────────────────────────────────────────
+
+(defn- parse-args [argv]
+  (loop [a argv, acc {:out-dir "/tmp" :cell-ids #{}}]
+    (if (empty? a)
+      acc
+      (let [[x & more] a]
+        (case x
+          "--cell" (recur (rest more) (update acc :cell-ids conj (first more)))
+          "--all" (recur more acc)
+          "--limit" (recur (rest more) (assoc acc :limit (parse-long (first more))))
+          "--out-dir" (recur (rest more) (assoc acc :out-dir (first more)))
+          "--dry-run" (recur more (assoc acc :dry-run true))
+          (recur more acc))))))
+
+(let [[cmd & rest-args] (drop (inc script-index) argv)
+      opts (parse-args (vec rest-args))]
+  (case cmd
+    "cells" (show-cells!)
+    "harvest" (harvest! opts)
+    "stats" (stats!)
+    "export" (js/process.exit (export! opts))
+    "sync" (js/process.exit (sync! opts))
+    (do (println "usage: eigyo cells|harvest|stats|export|sync")
+        (js/process.exit 1))))
