@@ -106,6 +106,27 @@
   [isic blueprints]
   (when (contains? blueprints isic) (str "cloud-itonami-isic-" isic)))
 
+(defn nearest-blueprint
+  "4 桁に repo が無ければ 3 桁（群）→ 2 桁（部門）へ落ちる。返すのは
+  `[repo-name match]`、match は `:exact` / `:group` / `:division` / `:none`。
+
+  **`blueprint_repo` に群の repo を書かない。** 書くと『この業種の blueprint が
+  在る』と読めてしまう。実例: ISIC 5613（持ち帰り飲食、実測 6,567 件）に 4 桁の
+  repo は無いが、親群の `cloud-itonami-isic-561` は在る —— 提案できるものが
+  在ることと、その業種の blueprint が在ることは別の主張なので、列を分ける。
+
+  ISIC の符号は桁が階層そのものなので、ここは表ではなく導出でよい。"
+  [isic blueprints]
+  (let [s (str isic)
+        ;; `at` という名前にしてある。`try` にすると **special form が優先され**、
+        ;; `(try s :exact)` が「s を評価して :exact を返す」になる（実測 2026-08-27、
+        ;; テストが 5613 に対して :exact を返して落ちた）。
+        at (fn [code m] (when (contains? blueprints code) [(str "cloud-itonami-isic-" code) m]))]
+    (or (at s :exact)
+        (when (<= 4 (count s)) (at (subs s 0 3) :group))
+        (when (<= 3 (count s)) (at (subs s 0 2) :division))
+        [nil :none])))
+
 (defn lead->row
   "リード → 表の 1 行（全列 string / nil）。
 
@@ -114,7 +135,8 @@
   読み手に見えなくなる。値が要る側は `osm_url` から 1 件ずつ取り直す。"
   [lead {:keys [blueprints harvested-at]}]
   (let [isic (:lead/isic lead)
-        bp (blueprint-for isic blueprints)]
+        bp (blueprint-for isic blueprints)
+        [near match] (nearest-blueprint isic blueprints)]
     {"lead_id" (:lead/id lead)
              "name" (:lead/name lead)
              "isic" isic
@@ -123,6 +145,8 @@
              "isic_value" (:lead/isic-value lead)
              "blueprint_repo" bp
              "blueprint_url" (when bp (str "https://github.com/cloud-itonami/" bp))
+             "blueprint_match" (name match)
+             "nearest_blueprint_repo" near
              "site" (:lead/site lead)
              "has_site" (str (boolean (:lead/site lead)))
              "has_email" (str (boolean (:lead/has-email? lead)))

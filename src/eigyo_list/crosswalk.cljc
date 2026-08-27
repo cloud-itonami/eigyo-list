@@ -20,7 +20,13 @@
 
   ## 版
 
-  ISIC Rev.4 の 4 桁。`cloud-itonami` の blueprint repo（`cloud-itonami-isic-NNNN`、
+  ISIC Rev.4 の 4 桁。**Rev.5 の符号を混ぜない** —— 2026-08-27 の初回 1 周で
+  `6522`（再保険、Rev.5）・`8899`・`8559` の 3 つを写しており、どれも blueprint が
+  無い区分として出た。Rev.4 では順に `6622`（保険代理店）・`8890`・`8549` で、
+  **3 つとも blueprint が在る**。blueprint との突き合わせが版ずれを見つけた ——
+  それがこの join の効き目そのもの。
+
+  `cloud-itonami` の blueprint repo（`cloud-itonami-isic-NNNN`、
   実測 456 件）がこの粒度なので、突き合わせられる粒度で写す。Rev.5 で符号が
   動いた区分（小売の 47 系など）は Rev.4 側を採る —— **blueprint に無い符号へ
   写すと、リードが『提案するものが無い』状態で出来上がる。**"
@@ -78,7 +84,16 @@
    "storage_rental" "5210" "rental" "7729" "locksmith" "8020"
    "ticket" "7990" "photo_studio" "7420" "tailor" "1410" "dressmaker" "1410"
    "shoe_repair" "9523" "watchmaker" "9529" "electronics_repair" "9521"
-   "computer_repair" "9511" "vacant" nil "yes" nil})
+   "computer_repair" "9511" "vacant" nil "yes" nil
+   ;; ── 2026-08-27 追加。**出所は receipt の `declared-misses`**（初回 1 周で
+   ;; 実際に返ってきて表に無かった値の上位）。思いつきで広げていない。
+   "pastry" "4721" "food" "4721" "tortilla" "4721" "ice_cream" "5610"
+   "water" "4722" "cannabis" "4773" "pottery" "4773" "weapons" "4773"
+   "gas" "4773" "anime" "4773" "gold_buyer" "4774"
+   "telecommunication" "4742" "mobile_phone_accessories" "4742"
+   "electrical" "4752" "doors" "4752" "household_linen" "4751"
+   "accessories" "4771" "wigs" "4771" "hobby" "4764"
+   "printing" "1811" "wholesale" "4690" "repair" "9529" "outpost" "5229"})
 
 (def craft->isic
   "`craft=*`。職人・工房。製造 (10-33)・建設 (41-43)・修理 (33/95) に散る。"
@@ -98,7 +113,10 @@
    "photographer" "7420" "gardener" "8130" "handicraft" "3290"
    "electronics_repair" "9521" "car_repair" "4520" "key_cutter" "9529"
    "agricultural_engines" "3312" "sculptor" "9000" "artist" "9000"
-   "brewer" "1103" "chimney_sweeper" "8129" "cleaning" "8121" "yes" nil})
+   "brewer" "1103" "chimney_sweeper" "8129" "cleaning" "8121" "yes" nil
+   ;; ── 2026-08-27 追加（同上、receipt 由来）
+   "photographic_laboratory" "7420" "photo_studio" "7420" "atelier" "9000"
+   "signmaker" "3290" "print_shop" "1811" "jam" "1079" "mobile_phone" "9512"})
 
 (def office->isic
   "`office=*`。ここは B2B の入口で、`website` の充足率が小売より高い。"
@@ -107,13 +125,17 @@
    "it" "6201" "consulting" "7020" "company" "7020" "advertising_agency" "7310"
    "marketing" "7310" "graphic_design" "7410" "interior_design" "7410"
    "research" "7210" "estate_agent" "6820" "property_management" "6820"
-   "insurance" "6522" "financial" "6619" "financial_advisor" "6619"
+   "insurance" "6622" "financial" "6619" "financial_advisor" "6619"
    "employment_agency" "7810" "recruitment" "7810" "temp_agency" "7820"
    "travel_agent" "7911" "logistics" "5229" "moving_company" "4923"
    "forwarding" "5229" "courier" "5320" "telecommunication" "6110"
-   "newspaper" "5813" "publisher" "5811" "coworking" "6810" "diplomatic" "8423"
+   ;; ── 2026-08-27 追加（receipt 由来）
+   "union" "9420" "university" "8530" "construction_company" "4100"
+   "police" "8423" "bank" "6419" "medical" "8620" "chamber" "9411"
+   "vacant" nil
+   "newspaper" "5813" "publisher" "5811" "coworking" "6810" "diplomatic" "8421"  ;; 対外関係。8423 は公共の秩序・安全（誤りを訂正）
    "government" "8411" "administrative" "8411" "tax" "8411" "employment_office" "8412"
-   "ngo" "9499" "association" "9499" "political_party" "9492" "charity" "8899"
+   "ngo" "9499" "association" "9499" "political_party" "9492" "charity" "8890"
    "religion" "9491" "educational_institution" "8549" "therapist" "8690"
    "physician" "8620" "veterinary" "7500" "water_utility" "3600" "energy_supplier" "3510"
    "security" "8010" "guide" "7990" "translator" "7490" "insurance_agency" "6622"
@@ -132,7 +154,7 @@
    "childcare" "8890" "kindergarten" "8510" "school" "8510" "college" "8530"
    "university" "8530" "driving_school" "8550" "language_school" "8550"
    "music_school" "8550" "prep_school" "8550" "dancing_school" "8550"
-   "training" "8559" "car_rental" "7710" "car_wash" "4520" "fuel" "4730"
+   "training" "8549" "car_rental" "7710" "car_wash" "4520" "fuel" "4730"
    "vehicle_inspection" "7120" "driving_range" "9311" "coworking_space" "6810"
    "post_office" "5310" "internet_cafe" "6312" "studio" "5911"
    "animal_boarding" "9609" "animal_shelter" "9499" "crematorium" "9603"
@@ -215,6 +237,13 @@
                          ["tourism" tourism->isic]
                          ["leisure" leisure->isic]]]
           [k {:any-of (sort (keys table))}])))
+
+(defn tables
+  "全部の表を宣言順に。**版の digest を取るための唯一の入口** —— 表が増えたら
+  ここも直さないと、digest が変わらないまま中身が変わる。"
+  []
+  [shop->isic craft->isic office->isic amenity->isic tourism->isic
+   leisure->isic healthcare->isic])
 
 (defn coverage
   "表が写している値の数。README と receipt に書く数の出どころを 1 つにする。"

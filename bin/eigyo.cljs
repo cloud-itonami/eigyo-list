@@ -3,7 +3,7 @@
   "eigyo-list の唯一の外に出る場所。
 
     eigyo cells                        区画の宣言と、いま何が測れているか
-    eigyo harvest [--cell id]… [--all] [--limit n] [--dry-run]
+    eigyo harvest [--cell id]… [--all] [--limit n] [--stale n] [--dry-run]
     eigyo stats                        手元の名簿を数える
     eigyo export [--out-dir /tmp]      lake へ載せる JSON と spec を書く
     eigyo sync   [--out-dir /tmp] [--dry-run]   R2 Data Catalog へ載せる
@@ -74,6 +74,16 @@
 (defn- lead-file [cell-id] (p "data" "leads" (str cell-id ".edn")))
 (defn- receipt-file [cell-id] (p "data" "receipts" (str cell-id ".edn")))
 
+(def crosswalk-version
+  "この収集がどの版の表で分類されたか。**混ざった vintage を見えるようにする。**
+
+  1 周に 25 分かかり、途中で表を育てることが実際に起きる（2026-08-27、
+  receipt の declared-misses から 38 値を足した）。すると名簿は 2 つの版から
+  出来た行の混在になる —— それ自体は常駐の平常運転（1 日 7 区画）だが、
+  **どの区画がどちらの版かが出力から分からないのは別の話**。"
+  (delay (-> (crypto/createHash "sha256")
+             (.update (pr-str (cw/tables)) "utf8") (.digest "hex") (subs 0 12))))
+
 (defn- sha256 [s]
   (-> (crypto/createHash "sha256") (.update s "utf8") (.digest "hex")))
 
@@ -133,6 +143,7 @@
                               :harvested-at (now)
                               :raw-count raw-count
                               :no-coords unclassified
+                              :crosswalk @crosswalk-version
                               :refused refused
                               :declared-misses declared-misses
                               :leads leads}]
@@ -140,16 +151,28 @@
                      (write-edn! (receipt-file (:cell/id cell)) (receipt rec))
                      {:cell cell :status :measured :rec rec})))
           (.catch (fn [e]
-                    {:cell cell :status :failed
-                     :error (or (some-> (ex-data e) pr-str) (.-message e))}))))))
+                    {:cell cell :status :failed :error (cov/error-detail e)}))))))
+
+(defn- stalest
+  "測定が古い順に n 件。**未測定を先頭に置く。** 常駐が毎日全区画を舐めると
+  Overpass に対して無作法なので、1 日ぶんを『いちばん古いところから』選ぶ。
+
+  順序は receipt の `:harvested-at` で決まる —— 宣言の順でも乱数でもない。
+  乱数だと、ある区画が何周も選ばれないことが起こりうる。"
+  [all n]
+  (->> all
+       (sort-by (fn [c] (or (:harvested-at (harvested (:cell/id c))) "")))
+       (take n)
+       vec))
 
 (defn- harvest! [opts]
   (let [all (cov/enabled-cells (cells))
         want (:cell-ids opts)
-        chosen (cond->> all
-                 (seq want) (filterv #(contains? want (:cell/id %)))
-                 (:limit opts) (take (:limit opts))
-                 true vec)]
+        chosen (cond
+                 (seq want) (filterv #(contains? want (:cell/id %)) all)
+                 (:stale opts) (stalest all (:stale opts))
+                 (:limit opts) (vec (take (:limit opts) all))
+                 :else (vec all))]
     (if (empty? chosen)
       (do (println "no cell selected -- refusing to report a pass") (js/process.exit 1))
       (do
@@ -203,7 +226,7 @@
               (false? (:cell/enabled? cell)) {:status :disabled}
               h {:status :measured :raw-count (:raw-count h) :leads (count (:leads h))
                  :refused (:refused h) :declared-misses (:declared-misses h)
-                 :at (:harvested-at h)}
+                 :crosswalk (:crosswalk h) :at (:harvested-at h)}
               :else {:status :planned}))))))
 
 (defn- segment-rows
@@ -223,7 +246,11 @@
                "chains" (str (count (filter #(= "true" (get % "chain")) rs)))
                "countries" (str (count (into #{} (keep #(get % "country") rs))))
                "example_lead" (get (first rs) "osm_url")
-               "blueprint_matched" (str (boolean (and bps (get (first rs) "blueprint_repo"))))}))
+               ;; exact / group / division / none。**exact 以外を『在る』と
+               ;; 数えない** —— 群の repo が在ることと、その業種の blueprint が
+               ;; 在ることは別の主張（lead/nearest-blueprint の docstring）。
+               "blueprint_match" (get (first rs) "blueprint_match")
+               "nearest_blueprint_repo" (get (first rs) "nearest_blueprint_repo")}))
        (sort-by #(- (parse-long (get % "leads"))))
        vec))
 
@@ -272,7 +299,12 @@
                             "\nset FLEET_ROOT to the superproject root."
                             "\nThis run cannot answer whether the tables were written."))
               2)
-          (let [args (cond-> ["--spec" (path/join out-dir "eigyo.spec.json") "--in-dir" out-dir]
+          (let [;; --evolve-schema: 列が**増える**向きだけを通す。減る向きは loader が
+                ;; refuse する（null 埋めは「値が無かった」と読めてしまう）。
+                ;; 明示して渡すのは、黙って広がる loader が typo の列を本物として
+                ;; 固定するから —— 広げるのは毎回こちらの意思。
+                args (cond-> ["--spec" (path/join out-dir "eigyo.spec.json")
+                              "--in-dir" out-dir "--evolve-schema"]
                        dry-run (conj "--dry-run"))
                 r (cp/spawnSync "python3" (clj->js (into [loader] args))
                                 #js {:stdio "inherit" :cwd (fleet-root)})]
@@ -309,7 +341,11 @@
       (println (str "  " (.padEnd (get s "isic") 6) (.padStart (get s "leads") 6)
                     "  " (or (get s "blueprint_repo") "-- no blueprint --"))))
     (let [no-bp (filter #(nil? (get % "blueprint_repo")) segs)]
-      (println (str "\nsegments without a blueprint: " (count no-bp) "/" (count segs))))))
+      (println (str "\nsegments without an exact blueprint: " (count no-bp) "/" (count segs)))
+      (doseq [s no-bp]
+        (println (str "  " (get s "isic") "  " (.padStart (get s "leads") 6)
+                      "  nearest: " (or (get s "nearest_blueprint_repo") "-- none --")
+                      " (" (get s "blueprint_match") ")"))))))
 
 ;; ── argv ──────────────────────────────────────────────────────────────────
 
@@ -322,6 +358,7 @@
           "--cell" (recur (rest more) (update acc :cell-ids conj (first more)))
           "--all" (recur more acc)
           "--limit" (recur (rest more) (assoc acc :limit (parse-long (first more))))
+          "--stale" (recur (rest more) (assoc acc :stale (parse-long (first more))))
           "--out-dir" (recur (rest more) (assoc acc :out-dir (first more)))
           "--dry-run" (recur more (assoc acc :dry-run true))
           (recur more acc))))))

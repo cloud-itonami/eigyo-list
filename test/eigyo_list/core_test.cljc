@@ -130,3 +130,44 @@
     (is (= {:cells 3 :measured 1 :failed 1 :planned 1 :disabled 0 :leads 3} s))
     (is (str/includes? (cov/plan-note rows) "FAILED"))
     (is (str/includes? (cov/plan-note rows) "not yet read"))))
+
+;; ── receipt から育てた分（2026-08-27）──────────────────────────────────────
+
+(deftest values-added-from-receipts-are-mapped
+  (testing "初回 1 周の declared-misses 上位が実際に写るようになった"
+    (is (= "4721" (:isic (cw/tags->isic {"shop" "pastry"}))))
+    (is (= "4742" (:isic (cw/tags->isic {"shop" "telecommunication"}))))
+    (is (= "9420" (:isic (cw/tags->isic {"office" "union"}))))
+    (is (= "7420" (:isic (cw/tags->isic {"craft" "photographic_laboratory"})))))
+  (testing "宣言が『店だが業種は言っていない』ものは写さないまま"
+    (is (nil? (cw/tags->isic {"shop" "yes"})))
+    (is (nil? (cw/tags->isic {"shop" "vacant"})))
+    (is (nil? (cw/tags->isic {"office" "vacant"})))
+    (is (nil? (cw/tags->isic {"healthcare" "yes"})))))
+
+(deftest diplomatic-is-foreign-affairs-not-public-order
+  (testing "8423 は公共の秩序・安全。大使館・領事館は 8421（対外関係）"
+    (is (= "8421" (:isic (cw/tags->isic {"office" "diplomatic"}))))
+    (is (= "8423" (:isic (cw/tags->isic {"office" "police"}))))))
+
+(deftest a-group-repo-is-not-claimed-as-the-segments-blueprint
+  (testing "5613（持ち帰り飲食）に 4 桁の repo は無いが親群 561 は在る"
+    (is (= ["cloud-itonami-isic-561" :group] (lead/nearest-blueprint "5613" #{"561" "5610"})))
+    (is (nil? (lead/blueprint-for "5613" #{"561" "5610"})))
+    (let [row (lead/lead->row {:lead/id "n/1" :lead/isic "5613" :lead/name "X"}
+                              {:blueprints #{"561" "5610"} :harvested-at "t"})]
+      (is (nil? (get row "blueprint_repo")) "群の repo を exact の列に書かない")
+      (is (= "group" (get row "blueprint_match")))
+      (is (= "cloud-itonami-isic-561" (get row "nearest_blueprint_repo")))))
+  (testing "どの桁にも無ければ none"
+    (is (= [nil :none] (lead/nearest-blueprint "9999" #{"5610"})))))
+
+(deftest a-failed-cell-records-the-status-not-just-that-it-failed
+  (testing "sci が ex-info を包むので、status は cause 側に在る"
+    (let [inner (ex-info "overpass request failed" {:status 429 :endpoint "x"})
+          wrapped (ex-info "overpass request failed" {:type :sci/error} inner)]
+      (is (re-find #"http 429" (cov/error-detail wrapped)))
+      (is (re-find #"http 429" (cov/error-detail inner)))))
+  (testing "status がどこにも無ければ、在ることにしない"
+    (is (re-find #"no status recovered|boom"
+                 (cov/error-detail (ex-info "boom" {}))))))

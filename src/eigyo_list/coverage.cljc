@@ -32,10 +32,27 @@
     (Math/round (* (* 111.32 (- north south))
                    (* 111.32 (Math/cos (* deg->rad mid)) (- east west))))))
 
+(defn error-detail
+  "例外 → 表に書ける 1 行。**status を捨てない。**
+
+  Overpass の失敗は `429`（こちらが速すぎる）と `504`（向こうが重い）と
+  ネットワーク断で、対応が違う。ところが nbb の sci は ex-info を包むので、
+  素朴に `ex-message` を取ると **どれも `overpass request failed`** になり、
+  『引けなかった』としか言えない行が残る（実測 2026-08-27、再収集で 2 区画が
+  この形で落ちた。status は cause 側に在った）。cause を辿って `:status` を探す。"
+  [e]
+  (loop [x e, depth 0]
+    (cond
+      (nil? x) "request failed (no status recovered)"
+      (:status (ex-data x)) (str "http " (:status (ex-data x)) " " (or (ex-message x) ""))
+      (< 3 depth) (or (ex-message e) (str e))
+      :else (recur (ex-cause x) (inc depth)))))
+
 (defn enabled-cells [cells] (filterv #(not (false? (:cell/enabled? %))) cells))
 
 (defn coverage-row
-  "1 区画 = 1 行。`status` は 4 値:
+  "1 区画 = 1 行。`crosswalk` はその収集が使った分類表の版（無い = その列が
+  出来る前に収集された、であって『同じ版』ではない）。`status` は 4 値:
 
      measured   引いて、応答を読んだ
      failed     引いたが読めなかった（理由つき）。**0 件ではない**
@@ -43,7 +60,7 @@
      disabled   宣言のうえで対象外にしてある
 
   `planned` を 0 件の `measured` と同じ形にしないことがこの表の存在理由。"
-  [cell {:keys [status raw-count leads refused declared-misses error at]}]
+  [cell {:keys [status raw-count leads refused declared-misses error at crosswalk]}]
   (let [bbox (cell->bbox cell)]
     {"cell" (:cell/id cell)
      "label" (:cell/label cell)
@@ -61,6 +78,7 @@
      "top_unmapped_tag" (some->> declared-misses (sort-by (comp - val)) first key)
      "error" (some-> error str)
      "measured_at" at
+     "crosswalk" (or crosswalk "unknown-pre-versioning")
      "source" "openstreetmap"
      "license" "ODbL-1.0"}))
 
