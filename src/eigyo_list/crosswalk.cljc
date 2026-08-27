@@ -20,7 +20,15 @@
 
   ## 版
 
-  ISIC Rev.4 の 4 桁。**Rev.5 の符号を混ぜない** —— 2026-08-27 の初回 1 周で
+  ISIC の 4 桁 class。**版は符号ごとに違う** —— `data/isic.edn`（org-un-isic
+  から生成）が、その符号を pin 済みの Rev.5 が宣言しているか、係争中の Rev.4
+  mirror が宣言しているか、両方かを持つ。**どちらにも無い符号は表に置けない**
+  （`scripts/verify-crosswalk.cljs` が落とす）。
+
+  版をまたいだ対応表は作らない —— UN が publish しておらず、org-un-isic は
+  「Rev.5 の符号を Rev.4 に写して解決済みと呼ぶな」と明記している。
+
+  **Rev.5 の符号を混ぜない** —— 2026-08-27 の初回 1 周で
   `6522`（再保険、Rev.5）・`8899`・`8559` の 3 つを写しており、どれも blueprint が
   無い区分として出た。Rev.4 では順に `6622`（保険代理店）・`8890`・`8549` で、
   **3 つとも blueprint が在る**。blueprint との突き合わせが版ずれを見つけた ——
@@ -145,7 +153,13 @@
   "`amenity=*` のうち **事業者に当たる値だけ**。ベンチもゴミ箱も `amenity` なので、
   ここに書いていない値は表に無い（`nil`）—— 引く側も `:any-of` でこのキー集合に
   絞るので、クエリと表が同じ集合を指す。"
-  {"restaurant" "5610" "cafe" "5610" "ice_cream" "5610" "fast_food" "5613"
+  {"restaurant" "5610" "cafe" "5610" "ice_cream" "5610"
+   ;; `fast_food` は **5610**。2026-08-27 まで `5613`（持ち帰り）に写していたが、
+   ;; **5613 は ISIC のどの版にも存在しない**（org-un-isic の pin 済み Rev.5 463
+   ;; class にも、Rev.4 mirror 428 class にも無い）。両版とも 5610 の題名は
+   ;; 「Restaurants and mobile food service activities」で、持ち帰りはそこに入る。
+   ;; 出所は `kotoba-lang/noren` の同じ表で、そちらにも同じ誤りが在る。
+   "fast_food" "5610"
    "food_court" "5629" "bar" "5630" "pub" "5630" "biergarten" "5630"
    "nightclub" "9329" "casino" "9200" "gambling" "9200" "cinema" "5914"
    "theatre" "9000" "arts_centre" "9000" "library" "9101" "museum" "9102"

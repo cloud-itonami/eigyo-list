@@ -73,4 +73,87 @@
   ;; ── オセアニア ──────────────────────────────────────────────────────────
   {:cell/id "au-sydney-cbd"          :cell/country "AU" :cell/region "oceania" :cell/center [-33.8690 151.2080] :cell/label "Sydney CBD"}
   {:cell/id "au-melbourne-cbd"       :cell/country "AU" :cell/region "oceania" :cell/center [-37.8140 144.9630] :cell/label "Melbourne CBD"}
-  {:cell/id "nz-auckland-cbd"        :cell/country "NZ" :cell/region "oceania" :cell/center [-36.8490 174.7630] :cell/label "Auckland CBD"}]}
+  {:cell/id "nz-auckland-cbd"        :cell/country "NZ" :cell/region "oceania" :cell/center [-36.8490 174.7630] :cell/label "Auckland CBD"}
+  ;; ── 第 2 波（2026-08-27）: 未収載だった国を 1 都市ずつ。**首都か最大都市の
+  ;; 中心**で、48 → 126 区画。1 日 12 区画の常駐で再訪は約 11 日。
+  ;; 増やす順は「まだ 1 区画も無い国」を先にした —— 同じ国の 2 枚目より、
+  ;; 初めての国の 1 枚目のほうが、この名簿が答えられる問いを増やす。
+  {:cell/id "be-brussels-centre"          :cell/country "BE" :cell/region "europe" :cell/center [50.8465 4.3525] :cell/label "Bruxelles centre"}
+  {:cell/id "at-wien-innere"              :cell/country "AT" :cell/region "europe" :cell/center [48.2082 16.3738] :cell/label "Wien Innere Stadt"}
+  {:cell/id "cz-praha-centre"             :cell/country "CZ" :cell/region "europe" :cell/center [50.087 14.421] :cell/label "Praha centrum"}
+  {:cell/id "hu-budapest-centre"          :cell/country "HU" :cell/region "europe" :cell/center [47.4979 19.054] :cell/label "Budapest belváros"}
+  {:cell/id "ro-bucuresti-centre"         :cell/country "RO" :cell/region "europe" :cell/center [44.4325 26.1039] :cell/label "București centru"}
+  {:cell/id "gr-athina-centre"            :cell/country "GR" :cell/region "europe" :cell/center [37.9838 23.7275] :cell/label "Αθήνα κέντρο"}
+  {:cell/id "dk-kobenhavn-centre"         :cell/country "DK" :cell/region "europe" :cell/center [55.6761 12.5683] :cell/label "København centrum"}
+  {:cell/id "no-oslo-sentrum"             :cell/country "NO" :cell/region "europe" :cell/center [59.9139 10.7522] :cell/label "Oslo sentrum"}
+  {:cell/id "fi-helsinki-keskusta"        :cell/country "FI" :cell/region "europe" :cell/center [60.1699 24.9384] :cell/label "Helsinki keskusta"}
+  {:cell/id "ua-kyiv-centre"              :cell/country "UA" :cell/region "europe" :cell/center [50.4501 30.5234] :cell/label "Київ центр"}
+  {:cell/id "rs-beograd-centre"           :cell/country "RS" :cell/region "europe" :cell/center [44.8125 20.4612] :cell/label "Beograd centar"}
+  {:cell/id "bg-sofia-centre"             :cell/country "BG" :cell/region "europe" :cell/center [42.6977 23.3219] :cell/label "София център"}
+  {:cell/id "hr-zagreb-centre"            :cell/country "HR" :cell/region "europe" :cell/center [45.815 15.9819] :cell/label "Zagreb centar"}
+  {:cell/id "sk-bratislava-centre"        :cell/country "SK" :cell/region "europe" :cell/center [48.1486 17.1077] :cell/label "Bratislava centrum"}
+  {:cell/id "si-ljubljana-centre"         :cell/country "SI" :cell/region "europe" :cell/center [46.0569 14.5058] :cell/label "Ljubljana center"}
+  {:cell/id "lt-vilnius-centre"           :cell/country "LT" :cell/region "europe" :cell/center [54.6872 25.2797] :cell/label "Vilnius centras"}
+  {:cell/id "lv-riga-centre"              :cell/country "LV" :cell/region "europe" :cell/center [56.9496 24.1052] :cell/label "Rīga centrs"}
+  {:cell/id "ee-tallinn-kesklinn"         :cell/country "EE" :cell/region "europe" :cell/center [59.437 24.7536] :cell/label "Tallinn kesklinn"}
+  {:cell/id "is-reykjavik-centre"         :cell/country "IS" :cell/region "europe" :cell/center [64.1466 -21.9426] :cell/label "Reykjavík miðborg"}
+  {:cell/id "lu-luxembourg-centre"        :cell/country "LU" :cell/region "europe" :cell/center [49.6116 6.1319] :cell/label "Luxembourg centre"}
+  {:cell/id "mt-valletta"                 :cell/country "MT" :cell/region "europe" :cell/center [35.8989 14.5146] :cell/label "Valletta"}
+  {:cell/id "cy-nicosia-centre"           :cell/country "CY" :cell/region "europe" :cell/center [35.1856 33.3823] :cell/label "Λευκωσία κέντρο"}
+  {:cell/id "ru-moskva-centre"            :cell/country "RU" :cell/region "europe" :cell/center [55.7558 37.6173] :cell/label "Москва центр"}
+  {:cell/id "cn-shanghai-huangpu"         :cell/country "CN" :cell/region "asia-pacific" :cell/center [31.2304 121.4737] :cell/label "上海・黄浦"}
+  {:cell/id "pk-karachi-saddar"           :cell/country "PK" :cell/region "south-asia" :cell/center [24.8607 67.0011] :cell/label "Karachi Saddar"}
+  {:cell/id "bd-dhaka-motijheel"          :cell/country "BD" :cell/region "south-asia" :cell/center [23.8103 90.4125] :cell/label "Dhaka Motijheel"}
+  {:cell/id "lk-colombo-fort"             :cell/country "LK" :cell/region "south-asia" :cell/center [6.9271 79.8612] :cell/label "Colombo Fort"}
+  {:cell/id "np-kathmandu-centre"         :cell/country "NP" :cell/region "south-asia" :cell/center [27.7172 85.324] :cell/label "Kathmandu centre"}
+  {:cell/id "mm-yangon-downtown"          :cell/country "MM" :cell/region "asia-pacific" :cell/center [16.8409 96.1735] :cell/label "Yangon downtown"}
+  {:cell/id "kh-phnompenh-centre"         :cell/country "KH" :cell/region "asia-pacific" :cell/center [11.5564 104.9282] :cell/label "Phnom Penh centre"}
+  {:cell/id "la-vientiane-centre"         :cell/country "LA" :cell/region "asia-pacific" :cell/center [17.9757 102.6331] :cell/label "Vientiane centre"}
+  {:cell/id "mn-ulaanbaatar-centre"       :cell/country "MN" :cell/region "asia-pacific" :cell/center [47.8864 106.9057] :cell/label "Ulaanbaatar centre"}
+  {:cell/id "kz-almaty-centre"            :cell/country "KZ" :cell/region "asia-pacific" :cell/center [43.222 76.8512] :cell/label "Алматы центр"}
+  {:cell/id "uz-tashkent-centre"          :cell/country "UZ" :cell/region "asia-pacific" :cell/center [41.2995 69.2401] :cell/label "Toshkent markaz"}
+  {:cell/id "ge-tbilisi-centre"           :cell/country "GE" :cell/region "middle-east" :cell/center [41.7151 44.8271] :cell/label "თბილისი ცენტრი"}
+  {:cell/id "am-yerevan-centre"           :cell/country "AM" :cell/region "middle-east" :cell/center [40.1792 44.4991] :cell/label "Երևան կենտրոն"}
+  {:cell/id "az-baku-centre"              :cell/country "AZ" :cell/region "middle-east" :cell/center [40.4093 49.8671] :cell/label "Bakı mərkəz"}
+  {:cell/id "jo-amman-centre"             :cell/country "JO" :cell/region "middle-east" :cell/center [31.9539 35.9106] :cell/label "عمّان وسط البلد"}
+  {:cell/id "lb-beirut-centre"            :cell/country "LB" :cell/region "middle-east" :cell/center [33.8938 35.5018] :cell/label "بيروت وسط"}
+  {:cell/id "qa-doha-centre"              :cell/country "QA" :cell/region "middle-east" :cell/center [25.2854 51.531] :cell/label "الدوحة"}
+  {:cell/id "kw-kuwaitcity-centre"        :cell/country "KW" :cell/region "middle-east" :cell/center [29.3759 47.9774] :cell/label "مدينة الكويت"}
+  {:cell/id "bh-manama-centre"            :cell/country "BH" :cell/region "middle-east" :cell/center [26.2285 50.586] :cell/label "المنامة"}
+  {:cell/id "om-muscat-centre"            :cell/country "OM" :cell/region "middle-east" :cell/center [23.588 58.3829] :cell/label "مسقط"}
+  {:cell/id "iq-baghdad-centre"           :cell/country "IQ" :cell/region "middle-east" :cell/center [33.3152 44.3661] :cell/label "بغداد"}
+  {:cell/id "tn-tunis-centre"             :cell/country "TN" :cell/region "africa" :cell/center [36.8065 10.1815] :cell/label "Tunis centre"}
+  {:cell/id "dz-alger-centre"             :cell/country "DZ" :cell/region "africa" :cell/center [36.7538 3.0588] :cell/label "Alger centre"}
+  {:cell/id "gh-accra-centre"             :cell/country "GH" :cell/region "africa" :cell/center [5.6037 -0.187] :cell/label "Accra centre"}
+  {:cell/id "ci-abidjan-plateau"          :cell/country "CI" :cell/region "africa" :cell/center [5.36 -4.0083] :cell/label "Abidjan Plateau"}
+  {:cell/id "sn-dakar-plateau"            :cell/country "SN" :cell/region "africa" :cell/center [14.7167 -17.4677] :cell/label "Dakar Plateau"}
+  {:cell/id "cm-douala-centre"            :cell/country "CM" :cell/region "africa" :cell/center [4.0511 9.7679] :cell/label "Douala centre"}
+  {:cell/id "ug-kampala-centre"           :cell/country "UG" :cell/region "africa" :cell/center [0.3476 32.5825] :cell/label "Kampala centre"}
+  {:cell/id "tz-daressalaam-centre"       :cell/country "TZ" :cell/region "africa" :cell/center [-6.7924 39.2083] :cell/label "Dar es Salaam centre"}
+  {:cell/id "et-addisababa-centre"        :cell/country "ET" :cell/region "africa" :cell/center [9.03 38.74] :cell/label "አዲስ አበባ"}
+  {:cell/id "zm-lusaka-centre"            :cell/country "ZM" :cell/region "africa" :cell/center [-15.3875 28.3228] :cell/label "Lusaka centre"}
+  {:cell/id "zw-harare-centre"            :cell/country "ZW" :cell/region "africa" :cell/center [-17.8252 31.0335] :cell/label "Harare centre"}
+  {:cell/id "mz-maputo-centre"            :cell/country "MZ" :cell/region "africa" :cell/center [-25.9692 32.5732] :cell/label "Maputo centro"}
+  {:cell/id "ao-luanda-centre"            :cell/country "AO" :cell/region "africa" :cell/center [-8.839 13.2894] :cell/label "Luanda centro"}
+  {:cell/id "rw-kigali-centre"            :cell/country "RW" :cell/region "africa" :cell/center [-1.9441 30.0619] :cell/label "Kigali centre"}
+  {:cell/id "bw-gaborone-centre"          :cell/country "BW" :cell/region "africa" :cell/center [-24.6282 25.9231] :cell/label "Gaborone centre"}
+  {:cell/id "na-windhoek-centre"          :cell/country "NA" :cell/region "africa" :cell/center [-22.5609 17.0658] :cell/label "Windhoek centre"}
+  {:cell/id "mu-portlouis-centre"         :cell/country "MU" :cell/region "africa" :cell/center [-20.1609 57.5012] :cell/label "Port Louis centre"}
+  {:cell/id "mg-antananarivo-centre"      :cell/country "MG" :cell/region "africa" :cell/center [-18.8792 47.5079] :cell/label "Antananarivo centre"}
+  {:cell/id "ec-quito-centre"             :cell/country "EC" :cell/region "latin-america" :cell/center [-0.1807 -78.4678] :cell/label "Quito centro"}
+  {:cell/id "uy-montevideo-centro"        :cell/country "UY" :cell/region "latin-america" :cell/center [-34.9011 -56.1645] :cell/label "Montevideo centro"}
+  {:cell/id "py-asuncion-centro"          :cell/country "PY" :cell/region "latin-america" :cell/center [-25.2637 -57.5759] :cell/label "Asunción centro"}
+  {:cell/id "bo-lapaz-centro"             :cell/country "BO" :cell/region "latin-america" :cell/center [-16.4897 -68.1193] :cell/label "La Paz centro"}
+  {:cell/id "ve-caracas-centro"           :cell/country "VE" :cell/region "latin-america" :cell/center [10.4806 -66.9036] :cell/label "Caracas centro"}
+  {:cell/id "cr-sanjose-centro"           :cell/country "CR" :cell/region "latin-america" :cell/center [9.9281 -84.0907] :cell/label "San José centro"}
+  {:cell/id "pa-panama-centro"            :cell/country "PA" :cell/region "latin-america" :cell/center [8.9824 -79.5199] :cell/label "Panamá centro"}
+  {:cell/id "gt-guatemala-centro"         :cell/country "GT" :cell/region "latin-america" :cell/center [14.6349 -90.5069] :cell/label "Guatemala centro"}
+  {:cell/id "do-santodomingo-centro"      :cell/country "DO" :cell/region "latin-america" :cell/center [18.4861 -69.9312] :cell/label "Santo Domingo centro"}
+  {:cell/id "jm-kingston-centre"          :cell/country "JM" :cell/region "latin-america" :cell/center [17.9714 -76.7931] :cell/label "Kingston centre"}
+  {:cell/id "tt-portofspain-centre"       :cell/country "TT" :cell/region "latin-america" :cell/center [10.6549 -61.5019] :cell/label "Port of Spain centre"}
+  {:cell/id "hn-tegucigalpa-centro"       :cell/country "HN" :cell/region "latin-america" :cell/center [14.0723 -87.1921] :cell/label "Tegucigalpa centro"}
+  {:cell/id "sv-sansalvador-centro"       :cell/country "SV" :cell/region "latin-america" :cell/center [13.6929 -89.2182] :cell/label "San Salvador centro"}
+  {:cell/id "ni-managua-centro"           :cell/country "NI" :cell/region "latin-america" :cell/center [12.115 -86.2362] :cell/label "Managua centro"}
+  {:cell/id "cu-lahabana-centro"          :cell/country "CU" :cell/region "latin-america" :cell/center [23.1136 -82.3666] :cell/label "La Habana centro"}
+  {:cell/id "fj-suva-centre"              :cell/country "FJ" :cell/region "oceania" :cell/center [-18.1416 178.4419] :cell/label "Suva centre"}
+  {:cell/id "pg-portmoresby-centre"       :cell/country "PG" :cell/region "oceania" :cell/center [-9.4438 147.1803] :cell/label "Port Moresby centre"}]}

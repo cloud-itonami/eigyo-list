@@ -3,7 +3,7 @@
 <!--
   cloud.itonami.eigyo-list-tick — 1 日ぶんの収集と、3 表の載せ直し。
 
-  1 日 1 回、いちばん古い 7 区画だけを引き直す（48 区画なので再訪は約 1 週間）。
+  1 日 1 回、いちばん古い 12 区画だけを引き直す（127 区画なので再訪は約 11 日）。
   毎日 48 区画を舐めない理由と、exit 2 の扱いは bin/resident.cljs の docstring に
   1 箇所だけ置いてある。**この plist に判断を書かない** —— launchctl は編集の
   たびに bootout/bootstrap が要るので、判断を持つ plist は誰も直さない。
@@ -44,9 +44,9 @@
   <key>StandardErrorPath</key>
   <string>/tmp/eigyo-list-tick.err</string>
 
-  <!-- 7 区画 4 分 + 156k 行の commit 3 分。20 分を超えたら何かおかしい。 -->
+  <!-- 12 区画 8 分 + 全行の commit 5 分。30 分を超えたら何かおかしい。 -->
   <key>ExitTimeOut</key>
-  <integer>1200</integer>
+  <integer>1800</integer>
 
   <key>ProcessType</key>
   <string>Background</string>

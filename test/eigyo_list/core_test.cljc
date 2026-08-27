@@ -171,3 +171,64 @@
   (testing "status がどこにも無ければ、在ることにしない"
     (is (re-find #"no status recovered|boom"
                  (cov/error-detail (ex-info "boom" {}))))))
+
+(deftest isic-titles-say-which-revision-they-came-from
+  (let [classes {"5610" {:rev5? true :title "Restaurants..." :rev4-mirror? true :mirror-title "Restaurants..."}
+                 "9602" {:rev4-mirror? true :mirror-title "Hairdressing and other beauty treatment"}
+                 "8559" {:rev5? true :title "Other education n.e.c."}}]
+    (is (= "both" (:revision (lead/isic-facts "5610" classes))))
+    (is (= "rev4-mirror" (:revision (lead/isic-facts "9602" classes))))
+    (is (= "rev5" (:revision (lead/isic-facts "8559" classes))))
+    (testing "mirror にしか無い符号の題名は mirror から取る（そうと分かる形で）"
+      (is (= "Hairdressing and other beauty treatment" (:title (lead/isic-facts "9602" classes)))))
+    (testing "権威に無い符号は none。空欄にしない"
+      (is (= "none" (:revision (lead/isic-facts "5613" classes)))))
+    (testing "権威を読んでいなければ unverified —— 『照合して分からなかった』と別"
+      (is (= "unverified" (:revision (lead/isic-facts "5610" nil)))))))
+
+;; ── 同じ店が 2 つの element として立っている分 ────────────────────────────
+
+(defn- l [id name lat lon tags]
+  {:lead/id id :lead/name name :lead/isic "5610" :lead/lat lat :lead/lon lon
+   :lead/tag-count tags})
+
+(deftest the-building-way-and-the-poi-node-are-one-business
+  (let [[kept dropped] (lead/dedupe-leads
+                        [(l "node/1" "そば処まる" 35.6800 139.7600 9)
+                         (l "way/2"  "そば処まる" 35.68005 139.76002 4)])]
+    (is (= 1 (count kept)))
+    (is (= 1 dropped))
+    (testing "残すのはタグの多いほう（連絡先を持っているのはたいていそちら）"
+      (is (= "node/1" (:lead/id (first kept)))))))
+
+(deftest chain-branches-are-not-one-business
+  (let [[kept dropped] (lead/dedupe-leads
+                        [(l "node/1" "スターバックス" 35.6800 139.7600 8)
+                         (l "node/2" "スターバックス" 35.6830 139.7640 8)])]
+    (is (= 2 (count kept)) "300 m 離れた同名は別の店")
+    (is (zero? dropped))))
+
+(deftest a-dropped-duplicate-is-counted-not-silently-removed
+  (let [obs (fn [id lat lon extra]
+              {:obs/source-id id :obs/lat lat :obs/lon lon
+               :obs/evidence-url (str "https://www.openstreetmap.org/" id)
+               :obs/tags (merge {"amenity" "restaurant" "name" "まる"
+                                 "website" "https://maru.test/"} extra)})
+        r (lead/observations->leads
+           [(obs "node/1" 35.68 139.76 {"phone" "1"})
+            (obs "way/2" 35.68001 139.76001 {})] cell)]
+    (is (= 1 (count (:leads r))))
+    (is (= 1 (get-in r [:refused :duplicate-of-another-element]))
+        "畳んだことが receipt に出る —— 『居なかった』と区別できる形で")))
+
+(deftest freshness-and-address-are-carried
+  (let [o {:obs/source-id "node/9" :obs/lat 35.68 :obs/lon 139.76
+           :obs/evidence-url "u" :obs/osm-version 7
+           :obs/osm-timestamp "2015-06-01T00:00:00Z"
+           :obs/tags {"amenity" "cafe" "name" "C" "website" "https://c.test/"
+                      "addr:street" "本町" "addr:housenumber" "1-2"}}
+        row (lead/lead->row (lead/observation->lead o cell)
+                            {:blueprints #{"5610"} :harvested-at "t"})]
+    (is (= "2015-06-01T00:00:00Z" (get row "osm_last_edit")))
+    (is (= "7" (get row "osm_version")))
+    (is (= "true" (get row "has_addr")))))

@@ -140,6 +140,44 @@ FLEET_ROOT=<superproject> nbb scripts/gen-blueprints.cljs --check
 `scripts/datalake-sync.py`（認証は `datalake_catalog.load_token`）に委ねる ——
 Iceberg の commit を書く 2 本目を持たない。
 
+## 符号は権威に当てる（ISIC）
+
+`data/isic.edn` は `cloud-itonami/org-un-isic` から生成した投影で、符号ごとに
+**pin 済みの Rev.5（463 class）が宣言しているか、係争中の Rev.4 mirror（428 class）が
+宣言しているか、両方か**を持つ。行の `isic_revision` はそれをそのまま言う。
+
+```bash
+nbb --classpath src scripts/verify-crosswalk.cljs   # 0 全符号が実在 / 1 実在しない符号 / 2 権威を読めなかった
+```
+
+**どちらの版にも無い符号を表に置かない。** 置くと、その符号のリードは
+「blueprint が無い区分」として積み上がり、品揃えの穴に見える —— 実際はこちらの
+写し間違いである。実測 2026-08-27: `5613`（持ち帰り飲食）がまさにこれで、
+**ISIC のどの版にも存在しない符号に 6,567 件が載っていた**（出所は
+`kotoba-lang/noren` の同じ表）。いまは `amenity=fast_food` → `5610`。
+
+⚠ **版をまたいだ対応表は作らない。** UN が publish しておらず、org-un-isic は
+「Rev.5 の符号を Rev.4 に写して解決済みと呼ぶな」と明記している。
+
+## 同じ店が 2 つ立っている分は畳む
+
+OSM では建物の way とその中の POI node が両方 tag を持つことが多い。畳まないと
+**同じ相手に 2 回営業する**ことになる。名前と業種が同じで 40 m 以内を同一とみなし、
+タグの多いほうを残す（連絡先を持っているのはたいていそちら）。チェーンの支店は
+名前が同じでも離れているので畳まれない。**落とした数は receipt の
+`:duplicate-of-another-element` に出る** —— 件数が減った理由が「居なかった」なのか
+「畳んだ」なのかは、出力から区別できなければならない。
+
+## その事実は最後にいつ触られたか
+
+`osm_last_edit` / `osm_version`（`out meta`）。2014 年から動いていない POI と
+先月更新された POI は、営業リストとして同じ重みではない。**`user` / `uid` は
+取らない** —— 誰が編集したかは事業者についての事実ではなく、編集者個人の情報。
+
+⚠ この 2 列と `has_addr` は **2026-08-27 の第 3 波から**。それ以前に収集した
+区画の行では空で、それは「OSM に timestamp が無い」ではなく「こちらが訊く前に
+収集した」である。常駐が置き換える。
+
 ## 分類は表であって推測ではない
 
 `src/eigyo_list/crosswalk.cljc` が OSM のタグ → ISIC を**表として**持つ。

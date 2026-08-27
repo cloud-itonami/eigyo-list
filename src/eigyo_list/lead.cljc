@@ -82,14 +82,71 @@
        :lead/lat (when (number? lat) (/ (Math/round (* 1e5 (double lat))) 1e5))
        :lead/lon (when (number? lon) (/ (Math/round (* 1e5 (double lon))) 1e5))
        :lead/osm-url evidence-url
+       :lead/tag-count (count tags)
+       :lead/osm-version (:obs/osm-version _obs)
+       :lead/osm-last-edit (:obs/osm-timestamp _obs)
+       :lead/has-addr? (boolean (and (get tags "addr:street")
+                                     (or (get tags "addr:housenumber")
+                                         (get tags "addr:housename"))))
        :lead/cell (:cell/id cell)})))
+
+(def ^:private dup-metres 40)
+
+(defn- metres-apart
+  "緯度経度の差 → おおよその距離 m。**厳密である必要はない** —— 40 m という
+  閾値自体が経験的で、Haversine にしても閾値の恣意性は消えない。"
+  [a b]
+  (let [dlat (- (:lead/lat a) (:lead/lat b))
+        dlon (* (- (:lead/lon a) (:lead/lon b))
+                (Math/cos (* (/ Math/PI 180) (:lead/lat a))))]
+    (* 111320 (Math/sqrt (+ (* dlat dlat) (* dlon dlon))))))
+
+(defn- richer
+  "同じ店の 2 つの element のうち残すほう。**タグの多いほう** —— 建物の way と
+  その中の POI node が両方立っていることが実際に多く、連絡先を持っているのは
+  たいてい node のほうだが、常にではない。同数なら id 文字列で決める（決定的）。"
+  [a b]
+  (let [ta (:lead/tag-count a 0) tb (:lead/tag-count b 0)]
+    (cond (> ta tb) a (< ta tb) b
+          (neg? (compare (:lead/id a) (:lead/id b))) a :else b)))
+
+(defn dedupe-leads
+  "同じ事業者が 2 つの element として立っているぶんを畳む。
+
+  **名前と業種が同じで、40 m 以内**を同一とみなす。OSM では建物の way と
+  その中の POI node が両方 tag を持つことが多く、畳まないと**同じ店を 2 回
+  数える**（営業リストとしては同じ相手に 2 回当たることになる）。
+
+  返すのは `[残ったもの 落とした数]`。**落とした数を返すのは、畳んだこと自体を
+  receipt に出すため** —— 件数が減った理由が『居なかった』なのか『畳んだ』
+  なのかは、出力から区別できなければならない。
+
+  チェーンの支店は名前が同じでも 40 m 離れているので畳まれない。"
+  [leads]
+  (let [by (group-by (juxt :lead/name :lead/isic) leads)]
+    (reduce (fn [[kept dropped] [_ group]]
+              (if (= 1 (count group))
+                [(conj kept (first group)) dropped]
+                (let [clusters (reduce (fn [cs l]
+                                         (if-let [i (first (keep-indexed
+                                                            (fn [i c] (when (< (metres-apart (first c) l) dup-metres) i))
+                                                            cs))]
+                                           (update cs i conj l)
+                                           (conj cs [l])))
+                                       [] (sort-by :lead/id group))]
+                  [(into kept (map #(reduce richer %) clusters))
+                   (+ dropped (- (count group) (count clusters)))])))
+            [[] 0]
+            by)))
 
 (defn observations->leads
   "観測列 → `{:leads [...] :refused {理由 件数} :declared-misses {\"shop=x\" n}}`。"
   [observations cell]
   (let [rs (map #(observation->lead % cell) observations)
-        leads (vec (keep #(when (:lead/id %) %) rs))
-        refused (frequencies (keep :refused rs))
+        [leads dropped] (dedupe-leads (vec (keep #(when (:lead/id %) %) rs)))
+        leads (vec (sort-by :lead/id leads))
+        refused (cond-> (frequencies (keep :refused rs))
+                  (pos? dropped) (assoc :duplicate-of-another-element dropped))
         misses (frequencies (keep :declared (filter #(= :isic-not-declared (:refused %)) rs)))]
     {:leads leads
      :refused refused
@@ -127,20 +184,44 @@
         (when (<= 3 (count s)) (at (subs s 0 2) :division))
         [nil :none])))
 
+(defn isic-facts
+  "符号 → `{:title .. :revision ..}`。`classes` は `data/isic.edn` の `:classes`。
+
+  題名は **pin 済みの Rev.5 を優先**し、そこに無ければ Rev.4 mirror の題名を使う。
+  `revision` がどちらから来たかを言うので、読む側は係争中の表から来た文字列を
+  そうと分かって読める（org-un-isic: mirror は pin 無しで、UN の legacy 構造
+  ファイルと 414 中 33 件で題名が食い違う）。
+
+  `classes` が無い（= 権威を読んでいない）ときは **`:unverified`**。空文字でも
+  `nil` でもなく、そう書く —— 『照合していない』と『照合して版が分からなかった』を
+  同じ顔にしない。"
+  [isic classes]
+  (if-not classes
+    {:title nil :revision "unverified"}
+    (let [k (get classes isic)]
+      {:title (or (:title k) (:mirror-title k))
+       :revision (cond (nil? k) "none"
+                       (and (:rev5? k) (:rev4-mirror? k)) "both"
+                       (:rev5? k) "rev5"
+                       :else "rev4-mirror")})))
+
 (defn lead->row
   "リード → 表の 1 行（全列 string / nil）。
 
   **連絡先の値の列は無い**（`has_email` / `has_phone` だけ）。lake 側と git 側で
   同じ行が出る —— 片方だけが値を持つ形にすると、どちらを配ってよいかが
   読み手に見えなくなる。値が要る側は `osm_url` から 1 件ずつ取り直す。"
-  [lead {:keys [blueprints harvested-at]}]
+  [lead {:keys [blueprints classes harvested-at]}]
   (let [isic (:lead/isic lead)
         bp (blueprint-for isic blueprints)
-        [near match] (nearest-blueprint isic blueprints)]
+        [near match] (nearest-blueprint isic blueprints)
+        {:keys [title revision]} (isic-facts isic classes)]
     {"lead_id" (:lead/id lead)
              "name" (:lead/name lead)
              "isic" isic
              "isic_section" (cw/isic->section isic)
+             "isic_title" title
+             "isic_revision" revision
              "isic_key" (:lead/isic-key lead)
              "isic_value" (:lead/isic-value lead)
              "blueprint_repo" bp
@@ -161,6 +242,9 @@
              "lon" (some-> (:lead/lon lead) str)
              "cell" (:lead/cell lead)
              "osm_url" (:lead/osm-url lead)
+             "osm_version" (some-> (:lead/osm-version lead) str)
+             "osm_last_edit" (:lead/osm-last-edit lead)
+             "has_addr" (str (boolean (:lead/has-addr? lead)))
              "source" "openstreetmap"
              "license" "ODbL-1.0"
              "harvested_at" harvested-at}))

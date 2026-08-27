@@ -71,6 +71,13 @@
   (let [f (p "data" "blueprints.edn")]
     (when (exists? f) (into #{} (:isic-codes (slurp-edn f))))))
 
+(defn- isic-classes
+  "`data/isic.edn` の `:classes`。**無ければ nil を返す** —— 空 map にすると
+  『どの符号も権威に無い』と区別が付かない。"
+  []
+  (let [f (p "data" "isic.edn")]
+    (when (exists? f) (:classes (slurp-edn f)))))
+
 (defn- lead-file [cell-id] (p "data" "leads" (str cell-id ".edn")))
 (defn- receipt-file [cell-id] (p "data" "receipts" (str cell-id ".edn")))
 
@@ -106,6 +113,14 @@
                                       (take 50 (sort-by (comp - val) (:declared-misses rec))))
                :declared-misses-total (count (:declared-misses rec))))))
 
+(defn- receipt-at
+  "その区画を最後に測った時刻。**receipt から読む（2 KB）** —— 名簿本体は
+  1 区画 2〜4 MB で、127 区画ぶんを時刻 1 つのために読むと数分かかる
+  （実測 2026-08-27: `--stale` が最初の 1 行を出すまで無音で数分止まった）。"
+  [cell-id]
+  (let [f (receipt-file cell-id)]
+    (when (exists? f) (:harvested-at (slurp-edn f)))))
+
 (defn- harvested
   "**読めなかったファイルを『まだ収集していない』として返さない。** 前者は
   planned に、後者も planned に見えるので、区別が付かないまま 1 区画ぶんの
@@ -121,17 +136,25 @@
 
 ;; ── harvest ───────────────────────────────────────────────────────────────
 
+(defn- endpoint-for
+  "区画ごとに mirror を回す。**こちらの総レートは変わらない**（間隔の
+  throttle は 1 つの atom で効いている）が、1 ホストが受ける量は半分になる。
+  無償の共有インフラに対して、同じ仕事を 1 台に集めない。"
+  [i]
+  (nth ov/mirrors (mod i (count ov/mirrors))))
+
 (defn- harvest-cell!
   "1 区画を引いて保存する。**分類は Overpass の応答からではなくタグから**
   （`:classify` は座標を持つ element を全部通す。業種の判定は `lead` 側で
   行い、落ちた理由をこちらが数えるため —— 上流で落とすと `:unclassified` に
   丸まって理由が消える）。"
-  [cell dry-run?]
+  [cell dry-run? i]
   (let [bbox (cov/cell->bbox cell)
-        q (ov/ql bbox {:selectors (cw/selectors) :nwr? true :timeout 90})]
+        q (ov/ql bbox {:selectors (cw/selectors) :nwr? true :timeout 90 :meta? true})]
     (if dry-run?
       (js/Promise.resolve {:cell cell :status :dry-run :ql q})
       (-> (ovf/post-ql q {:user-agent user-agent
+                          :endpoint (endpoint-for i)
                           :min-interval-ms 1500
                           :parse-opts {:classify (constantly :business)
                                        :attr :obs/kind}})
@@ -161,7 +184,7 @@
   乱数だと、ある区画が何周も選ばれないことが起こりうる。"
   [all n]
   (->> all
-       (sort-by (fn [c] (or (:harvested-at (harvested (:cell/id c))) "")))
+       (sort-by (fn [c] (or (receipt-at (:cell/id c)) "")))
        (take n)
        vec))
 
@@ -178,9 +201,9 @@
       (do
         (println (str "harvest " (count chosen) " cell(s)"
                       (when (:dry-run opts) "  [dry-run]")))
-        (-> (reduce (fn [pr cell]
+        (-> (reduce (fn [pr [i cell]]
                       (.then pr (fn [acc]
-                                  (.then (harvest-cell! cell (:dry-run opts))
+                                  (.then (harvest-cell! cell (:dry-run opts) i)
                                          (fn [r]
                                            (let [{:keys [status rec error]} r]
                                              (println
@@ -190,7 +213,7 @@
                                                    (when error (str "\t" error)))))
                                            (conj acc r))))))
                     (js/Promise.resolve [])
-                    chosen)
+                    (map-indexed vector chosen))
             (.then (fn [rs]
                      (let [measured (filterv #(= :measured (:status %)) rs)
                            failed (filterv #(= :failed (:status %)) rs)
@@ -213,9 +236,11 @@
 (defn- all-harvests [] (keep #(harvested (:cell/id %)) (cells)))
 
 (defn- lead-rows [bps]
-  (vec (for [h (all-harvests)
-             l (:leads h)]
-         (lead/lead->row l {:blueprints (or bps #{}) :harvested-at (:harvested-at h)}))))
+  (let [classes (isic-classes)]
+    (vec (for [h (all-harvests)
+               l (:leads h)]
+           (lead/lead->row l {:blueprints (or bps #{}) :classes classes
+                              :harvested-at (:harvested-at h)})))))
 
 (defn- coverage-rows []
   (vec (for [cell (cells)]
@@ -238,6 +263,8 @@
        (map (fn [[isic rs]]
               {"isic" isic
                "isic_section" (cw/isic->section isic)
+               "isic_title" (get (first rs) "isic_title")
+               "isic_revision" (get (first rs) "isic_revision")
                "blueprint_repo" (get (first rs) "blueprint_repo")
                "leads" (str (count rs))
                "with_site" (str (count (filter #(= "true" (get % "has_site")) rs)))
@@ -268,6 +295,9 @@
               :tables [{:file "eigyo_lead.json" :table "eigyo_lead" :int_columns []}
                        {:file "eigyo_coverage.json" :table "eigyo_coverage" :int_columns []}
                        {:file "eigyo_segment.json" :table "eigyo_segment" :int_columns []}]}]
+    (when-not (isic-classes)
+      (println "WARNING: data/isic.edn is absent -- isic_revision will be 'unverified' on every row."
+               "Run scripts/gen-isic.cljs."))
     (when-not bps
       (println "WARNING: data/blueprints.edn is absent -- blueprint_repo will be empty on every row."
                "That is 'not matched', not 'no blueprint exists'."))
@@ -339,7 +369,8 @@
     (println "\ntop segments (leads / blueprint):")
     (doseq [s (take 20 segs)]
       (println (str "  " (.padEnd (get s "isic") 6) (.padStart (get s "leads") 6)
-                    "  " (or (get s "blueprint_repo") "-- no blueprint --"))))
+                    "  " (.padEnd (or (get s "isic_title") "?") 44)
+                    (or (get s "blueprint_repo") "-- no blueprint --"))))
     (let [no-bp (filter #(nil? (get % "blueprint_repo")) segs)]
       (println (str "\nsegments without an exact blueprint: " (count no-bp) "/" (count segs)))
       (doseq [s no-bp]

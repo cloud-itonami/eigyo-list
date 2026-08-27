@@ -1,7 +1,27 @@
 #!/usr/bin/env nbb
 (ns run-tests
+  "純粋なテストと、**権威に当てる検査**の両方。
+
+  分類表の符号が ISIC のどの版にも無い、という欠陥は unit test では捕まらない
+  （表の中で閉じている限り整合しているから）。外の権威に当てて初めて分かるので、
+  ここで一緒に走らせる —— 別コマンドにすると、走らせるのを忘れる。"
   (:require [clojure.test :as t]
+            ["child_process" :as cp]
+            ["path" :as path]
             [eigyo-list.core-test]))
+
+(defn- verify-crosswalk! []
+  (let [root (path/dirname (or (first (filter #(re-find #"run_tests\.cljs$" %) (vec js/process.argv))) "."))
+        r (cp/spawnSync "nbb" #js ["--classpath" "src" (path/join root "scripts" "verify-crosswalk.cljs")]
+                        #js {:stdio "inherit" :cwd root})]
+    (.-status r)))
+
 (defmethod t/report [:cljs.test/default :end-run-tests] [m]
-  (when-not (t/successful? m) (js/process.exit 1)))
+  (let [unit-ok? (t/successful? m)
+        _ (println "\n-- ISIC authority --")
+        code (verify-crosswalk!)]
+    (js/process.exit (cond (not unit-ok?) 1
+                           (not (zero? code)) code
+                           :else 0))))
+
 (t/run-tests 'eigyo-list.core-test)

@@ -1,0 +1,70 @@
+#!/usr/bin/env nbb
+(ns gen-isic
+  "ISIC の権威から `data/isic.edn` を作る。**生成物。手で編集しない。**
+
+  出所は `cloud-itonami/org-un-isic`（west project）。そこが 2 つの版を持ち、
+  **性質が違う**ので、こちらもそれを畳まずに持つ:
+
+    rev5         `data/rev5/classes.json` —— 公式 CSV から生成、sha256 で pin 済み
+    rev4-mirror  `data/classes/*.json` —— **pin 無し・出所 URL 無し・係争中**
+                 （org-un-isic の README: UN の legacy 構造ファイルと 414 件中
+                 33 件の題名で食い違う）
+
+  だから列は `rev4?` ではなく **`rev4-mirror?`** と呼ぶ。畳んで `:rev4` と
+  書くと、pin されていない表を pin されているものと同じ顔で配ることになる。
+
+  ⚠ **版をまたいだ対応表は作らない。** org-un-isic は『Rev.5 の符号を Rev.4 に
+  写して解決済みと呼ぶな』と書いている（UN が対応表を publish していない）。
+  ここがやるのは『この符号はどちらの版が宣言しているか』を並べることだけ。
+
+  exit: 0 書いた / 2 権威を読めなかった（在ることにしない）。"
+  (:require ["fs" :as fs] ["path" :as path] ["child_process" :as cp] [clojure.string :as str]))
+
+(def repo-root (path/resolve (path/dirname (path/dirname
+  (or (first (filter #(re-find #"\.cljs$" %) (vec js/process.argv))) ".")))))
+(def src (path/resolve repo-root ".." "org-un-isic"))
+(def out (path/join repo-root "data" "isic.edn"))
+
+(when-not (fs/existsSync (path/join src "data" "rev5" "classes.json"))
+  (println (str "no ISIC authority at " src
+                "\n  west update org-un-isic して出直す。読めなかったことは"
+                "\n  『符号が無い』ではない。"))
+  (js/process.exit 2))
+
+(defn- pin []
+  (let [r (cp/spawnSync "git" #js ["-C" src "rev-parse" "HEAD"] #js {:encoding "utf8"})]
+    (str/trim (or (.-stdout r) "unknown"))))
+
+(let [rev5 (js->clj (js/JSON.parse (fs/readFileSync (path/join src "data" "rev5" "classes.json") "utf8")))
+      mirror (into #{} (comp (filter #(str/ends-with? % ".json"))
+                             (map #(subs % 0 (- (count %) 5))))
+                   (js->clj (fs/readdirSync (path/join src "data" "classes"))))
+      mirror-title (fn [c]
+                     ;; rev4-mirror にしか無い符号の題名。**出所が違うので
+                     ;; `:title` に混ぜず `:mirror-title` に置く** —— 係争中の
+                     ;; 表から来た文字列を、pin された表の文字列と同じ列に
+                     ;; 並べると、読む側が区別できない。
+                     (try (get (js->clj (js/JSON.parse
+                                (fs/readFileSync (path/join src "data" "classes" (str c ".json")) "utf8")))
+                               "nameEn")
+                          (catch :default _ nil)))
+      codes (into (sorted-map)
+                  (for [c (into (set (keys rev5)) mirror)]
+                    [c (cond-> {}
+                         (contains? rev5 c) (assoc :rev5? true
+                                                   :title (get-in rev5 [c "nameEn"]))
+                         (contains? mirror c) (assoc :rev4-mirror? true
+                                                     :mirror-title (mirror-title c)))]))
+      data {:generated-by "scripts/gen-isic.cljs"
+            :source "cloud-itonami/org-un-isic"
+            :source-pin (pin)
+            :rev5-note "公式 CSV から生成、sha256 で pin 済み（org-un-isic data/rev5/upstream.edn）"
+            :rev4-mirror-note "pin 無し・出所 URL 無し・UN の legacy 構造ファイルと 414 中 33 件で題名が食い違う。係争中の表として扱う"
+            :counts {:rev5 (count rev5) :rev4-mirror (count mirror) :union (count codes)}
+            :classes codes}]
+  (when (zero? (count codes))
+    (println "0 classes -- refusing to write an empty authority")
+    (js/process.exit 2))
+  (fs/writeFileSync out (with-out-str (binding [*print-length* nil] (prn data))))
+  (println (str "wrote " out "  rev5 " (count rev5) " / rev4-mirror " (count mirror)
+                " / union " (count codes))))

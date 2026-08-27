@@ -1,0 +1,50 @@
+#!/usr/bin/env nbb
+(ns verify-crosswalk
+  "分類表の全符号を ISIC の権威に当てる。
+
+  **どちらの版にも無い符号を表に置かない。** 置くと、その符号に写されたリードは
+  『blueprint が無い区分』として静かに積み上がり、品揃えの穴に見える —— 実際は
+  こちらの写し間違いである（実測 2026-08-27: `5613` がまさにこれで、6,567 件が
+  存在しない符号に載っていた）。
+
+  exit: 0 全符号が少なくとも 1 つの版に在る / 1 無い符号が在る /
+        2 権威を読めなかった（**clean と区別する**）。"
+  (:require ["fs" :as fs] ["path" :as path]
+            [clojure.edn :as edn] [clojure.string :as str]
+            [eigyo-list.crosswalk :as cw]))
+
+(def repo-root (path/resolve (path/dirname (path/dirname
+  (or (first (filter #(re-find #"\.cljs$" %) (vec js/process.argv))) ".")))))
+(def isic-file (path/join repo-root "data" "isic.edn"))
+
+(when-not (fs/existsSync isic-file)
+  (println (str "no " isic-file " -- run scripts/gen-isic.cljs. "
+                "Refusing to report a pass on an authority I could not read."))
+  (js/process.exit 2))
+
+(let [{:keys [classes counts]} (edn/read-string (fs/readFileSync isic-file "utf8"))
+      codes (sort (into #{} (remove nil?) (mapcat vals (cw/tables))))
+      known (fn [c] (get classes c))
+      missing (remove known codes)
+      by-rev (frequencies (map (fn [c] (let [k (known c)]
+                                         (cond (and (:rev5? k) (:rev4-mirror? k)) :both
+                                               (:rev5? k) :rev5
+                                               (:rev4-mirror? k) :rev4-mirror
+                                               :else :none)))
+                               codes))]
+  (when (or (nil? counts) (zero? (:union counts 0)))
+    (println "authority has 0 classes -- that is not a pass") (js/process.exit 2))
+  (println (str "SCANNED\t" (count codes) "\tcrosswalk codes against "
+                (:union counts) " ISIC classes (rev5 " (:rev5 counts)
+                " / rev4-mirror " (:rev4-mirror counts) ")"))
+  (println (str "  both " (:both by-rev 0)
+                "  rev5-only " (:rev5 by-rev 0)
+                "  rev4-mirror-only " (:rev4-mirror by-rev 0)
+                "  NEITHER " (count missing)))
+  (if (seq missing)
+    (do (println (str "FAIL: " (count missing) " code(s) exist in no ISIC revision:"))
+        (doseq [c missing]
+          (println (str "  " c "  <- "
+                        (str/join ", " (for [t (cw/tables), [k v] t :when (= v c)] k)))))
+        (js/process.exit 1))
+    (js/process.exit 0)))
