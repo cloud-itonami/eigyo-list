@@ -1,1 +1,1 @@
-{:cell/id "is-reykjavik-centre", :cell/country "IS", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-08-29T20:41:35.789Z"}
+{:cell/id "is-reykjavik-centre", :cell/country "IS", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-08-30T20:41:34.114Z"}
