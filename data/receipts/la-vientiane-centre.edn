@@ -1,1 +1,1 @@
-{:cell/id "la-vientiane-centre", :cell/country "LA", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-08-31T20:43:26.291Z"}
+{:cell/id "la-vientiane-centre", :cell/country "LA", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-09-01T20:41:04.053Z"}
