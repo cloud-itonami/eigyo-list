@@ -1,1 +1,1 @@
-{:cell/id "kw-kuwaitcity-centre", :cell/country "KW", :status :failed, :error "http 502 overpass request failed", :attempted-at "2026-08-31T20:53:03.232Z"}
+{:cell/id "kw-kuwaitcity-centre", :cell/country "KW", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-09-01T20:42:59.731Z"}
