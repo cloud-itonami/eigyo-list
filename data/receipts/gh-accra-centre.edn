@@ -1,1 +1,1 @@
-{:cell/id "gh-accra-centre", :cell/country "GH", :status :failed, :error "http 500 overpass request failed", :attempted-at "2026-09-01T20:47:17.764Z"}
+{:cell/id "gh-accra-centre", :cell/country "GH", :status :failed, :error "http 504 overpass request failed", :attempted-at "2026-09-02T20:42:42.930Z"}

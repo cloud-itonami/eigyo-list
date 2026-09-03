@@ -1,0 +1,2 @@
+{:event :harvest, :cells ["la-vientiane-centre" "az-baku-centre" "kw-kuwaitcity-centre" "om-muscat-centre" "tn-tunis-centre" "gh-accra-centre" "ci-abidjan-plateau" "sn-dakar-plateau" "cm-douala-centre" "ug-kampala-centre" "tz-daressalaam-centre" "et-addisababa-centre"], :measured 10, :failed [["gh-accra-centre" "http 504 overpass request failed"] ["et-addisababa-centre" "http 504 overpass request failed"]], :leads 4137, :at "2026-09-02T20:48:38.838Z"}
+{:event :sync, :exit 1, :dry-run false, :at "2026-09-02T20:54:10.447Z"}
