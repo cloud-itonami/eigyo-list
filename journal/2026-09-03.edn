@@ -1,0 +1,2 @@
+{:event :harvest, :cells ["gh-accra-centre" "et-addisababa-centre" "zm-lusaka-centre" "zw-harare-centre" "mz-maputo-centre" "ao-luanda-centre" "rw-kigali-centre" "bw-gaborone-centre" "na-windhoek-centre" "mu-portlouis-centre" "mg-antananarivo-centre" "ec-quito-centre"], :measured 11, :failed [["rw-kigali-centre" "http 429 overpass request failed"]], :leads 3307, :at "2026-09-03T20:47:48.001Z"}
+{:event :sync, :exit 1, :dry-run false, :at "2026-09-03T20:59:33.816Z"}
