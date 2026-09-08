@@ -10,7 +10,7 @@
   同じ度数の箱をシンガポールとストックホルムに置くと**後者の面積が半分以下**に
   なり、件数の比較が緯度の関数になる。`half-lon = half-lat / cos(lat)` で
   実距離を揃える —— これは規約ではなく地球の形の話なので導出してよい。"
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 (def ^:private deg->rad (/ Math/PI 180.0))
 

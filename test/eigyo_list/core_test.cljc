@@ -1,6 +1,6 @@
 (ns eigyo-list.core-test
   (:require [clojure.test :refer [deftest is testing]]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [eigyo-list.crosswalk :as cw]
             [eigyo-list.lead :as lead]
             [eigyo-list.coverage :as cov]))
