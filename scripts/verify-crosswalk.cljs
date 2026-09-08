@@ -10,7 +10,7 @@
   exit: 0 全符号が少なくとも 1 つの版に在る / 1 無い符号が在る /
         2 権威を読めなかった（**clean と区別する**）。"
   (:require ["fs" :as fs] ["path" :as path]
-            [clojure.edn :as edn] [clojure.string :as str]
+            [clojure.edn :as edn] [kotoba.lang.text :as str]
             [eigyo-list.crosswalk :as cw]))
 
 (def repo-root (path/resolve (path/dirname (path/dirname

@@ -6,7 +6,7 @@
   出所は superproject の manifest。`--check` は書かずに差分だけ報告する。
 
   exit: 0 一致 / 1 差分あり（--check 時）/ 2 manifest を読めなかった。"
-  (:require ["fs" :as fs] ["path" :as path] [clojure.string :as str]))
+  (:require ["fs" :as fs] ["path" :as path] [kotoba.lang.text :as str]))
 
 (def repo-root (path/resolve (path/dirname (path/dirname (nth (vec js/process.argv) 2)))))
 (def root (or (some-> (.-FLEET_ROOT js/process.env) not-empty)
