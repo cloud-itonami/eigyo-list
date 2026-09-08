@@ -18,7 +18,7 @@
   ここがやるのは『この符号はどちらの版が宣言しているか』を並べることだけ。
 
   exit: 0 書いた / 2 権威を読めなかった（在ることにしない）。"
-  (:require ["fs" :as fs] ["path" :as path] ["child_process" :as cp] [clojure.string :as str]))
+  (:require ["fs" :as fs] ["path" :as path] ["child_process" :as cp] [kotoba.lang.text :as str]))
 
 (def repo-root (path/resolve (path/dirname (path/dirname
   (or (first (filter #(re-find #"\.cljs$" %) (vec js/process.argv))) ".")))))

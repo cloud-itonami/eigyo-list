@@ -15,7 +15,7 @@
             ["path" :as path]
             ["crypto" :as crypto]
             ["child_process" :as cp]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.edn :as edn]
             [eigyo-list.crosswalk :as cw]
             [eigyo-list.lead :as lead]
