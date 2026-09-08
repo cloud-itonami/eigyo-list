@@ -26,7 +26,7 @@
   `observation->lead` は `nil` を返さない。落ちた観測には理由が付く
   （`{:refused :no-contact-channel}`）。理由なしで消えると、『この街に事業者が
   居ない』と『この街の事業者を写せなかった』が同じ 0 になる。"
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [eigyo-list.crosswalk :as cw]))
 
 (def ^:private site-keys ["website" "contact:website" "url" "contact:url"])
