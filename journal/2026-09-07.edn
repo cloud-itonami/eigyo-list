@@ -1,1 +1,3 @@
 {:event :sync, :exit 0, :dry-run false, :at "2026-09-07T01:29:38.017Z"}
+{:event :harvest, :cells ["gt-guatemala-centro" "do-santodomingo-centro" "tt-portofspain-centre" "hn-tegucigalpa-centro" "sv-sansalvador-centro" "ni-managua-centro" "cu-lahabana-centro" "fj-suva-centre" "pg-portmoresby-centre" "gb-london-city" "fr-paris-centre" "de-berlin-mitte"], :measured 9, :failed [["hn-tegucigalpa-centro" "http 504 overpass request failed"] ["fr-paris-centre" "request failed (no status recovered)"] ["de-berlin-mitte" "http 504 overpass request failed"]], :leads 12993, :at "2026-09-07T21:06:00.593Z"}
+{:event :sync, :exit 0, :dry-run false, :at "2026-09-07T22:44:05.838Z"}

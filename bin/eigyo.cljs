@@ -183,12 +183,32 @@
                       ;; 前者は上流が壊れているか絞られていることを意味する
                       ;; （実測 2026-08-27: 502/500 で落ちた 2 区画が planned として
                       ;; 数えられていた）。
-                      (write-edn! (receipt-file (:cell/id cell))
-                                  {:cell/id (:cell/id cell)
-                                   :cell/country (:cell/country cell)
-                                   :status :failed
-                                   :error detail
-                                   :attempted-at (now)})
+                      ;;
+                      ;; **ただし前の測定を上書きしない。** receipt は git に
+                      ;; 載る唯一の durable な測定で（名簿 `data/leads/` は
+                      ;; .gitignore、fresh clone には無い）、失敗の stub で
+                      ;; 潰すと**その区画がいつ何件だったかが永久に消える**。
+                      ;; 実測 2026-09-09: `es-madrid-centro` と
+                      ;; `nl-amsterdam-centrum` は 08-27 の測定（6998 / 6067 件、
+                      ;; histogram と leads-sha256 つき）を持っていたのに、
+                      ;; 09-08 の 504 とネットワーク断で 5 key の stub に
+                      ;; なっていた —— 消えたことは出力のどこにも出ない。
+                      ;;
+                      ;; だから既存 receipt の上に失敗を**重ねる**。
+                      ;; `:status :failed` は最新の試行についての事実なので
+                      ;; coverage の 4 値は変わらず（`coverage-rows` は
+                      ;; `:status` だけを読む）、`:harvested-at` が残っている
+                      ;; かどうかで「一度も測れていない失敗」と「測れていた
+                      ;; が今回失敗した」が区別できるようになる。
+                      (let [f (receipt-file (:cell/id cell))
+                            prior (when (exists? f) (slurp-edn f))]
+                        (write-edn! f
+                                    (merge prior
+                                           {:cell/id (:cell/id cell)
+                                            :cell/country (:cell/country cell)
+                                            :status :failed
+                                            :error detail
+                                            :attempted-at (now)})))
                       {:cell cell :status :failed :error detail})))))))
 
 (defn- stalest
