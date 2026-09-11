@@ -2,7 +2,7 @@
 (ns resident
   "常駐の 1 日ぶん —— いちばん古い区画を引き直し、3 表を lake に載せ直す。
 
-    nbb --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljs
+    nbb --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljk
 
   launchd が 1 日 1 回呼ぶ（`ops/cloud.itonami.eigyo-list-tick.plist`）。
 
@@ -38,7 +38,7 @@
   防げない）。常駐は毎日 120 MB を書き直すので、**空きを先に測って、足りなければ
   走らずに 2 で終わる** —— 走って半分書くより、走らないほうがよい。
 
-    nbb … bin/resident.cljs --check   何をするかだけ出して終わる（収集しない）
+    nbb … bin/resident.cljk --check   何をするかだけ出して終わる（収集しない）
 
   exit: 0 進んだ / 1 拒否された（loader が居ない・0 行）/ 2 答えられなかった
   （1 区画も読めなかった・空きが足りない）"
@@ -89,21 +89,21 @@
 
 (when check?
   (println "  --check: 収集しない。stale の並びだけ出す")
-  (js/process.exit (run ["bin/eigyo.cljs" "cells"])))
+  (js/process.exit (run ["bin/eigyo.cljk" "cells"])))
 
-(let [h (run ["bin/eigyo.cljs" "harvest" "--stale" (str cells-per-day)])]
+(let [h (run ["bin/eigyo.cljk" "harvest" "--stale" (str cells-per-day)])]
   (cond
     ;; 2 は「1 区画も読めなかった」か「一部が failed」の両方で返る。前者だけを
     ;; 答えられなかったとして扱いたいので、coverage 側の数で判定し直す。
     (= 2 h)
-    (let [c (run ["bin/eigyo.cljs" "stats"])]
+    (let [c (run ["bin/eigyo.cljk" "stats"])]
       (println (str "harvest exit 2 -- stats exit " c
                     "\n  一部の区画が読めなかった。coverage 表の failed に残る。"
                     "\n  1 区画も読めなかった場合はここで止まる（下の export に行かない）"))
-      (js/process.exit (if (zero? c) (run ["bin/eigyo.cljs" "sync" "--out-dir" "/tmp/eigyo-out"]) 2)))
+      (js/process.exit (if (zero? c) (run ["bin/eigyo.cljk" "sync" "--out-dir" "/tmp/eigyo-out"]) 2)))
 
     (pos? h)
     (do (println (str "harvest refused (exit " h ")")) (js/process.exit h))
 
     :else
-    (js/process.exit (run ["bin/eigyo.cljs" "sync" "--out-dir" "/tmp/eigyo-out"]))))
+    (js/process.exit (run ["bin/eigyo.cljk" "sync" "--out-dir" "/tmp/eigyo-out"]))))

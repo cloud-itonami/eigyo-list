@@ -22,4 +22,4 @@ DATA
   this account, not only with the files in this repository.
 
   Contact values (email addresses, telephone numbers) present in OpenStreetMap
-  are NOT copied into this corpus. See `src/eigyo_list/lead.cljc`.
+  are NOT copied into this corpus. See `src/eigyo_list/lead.cljk`.

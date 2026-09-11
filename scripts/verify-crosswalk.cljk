@@ -18,7 +18,7 @@
 (def isic-file (path/join repo-root "data" "isic.edn"))
 
 (when-not (fs/existsSync isic-file)
-  (println (str "no " isic-file " -- run scripts/gen-isic.cljs. "
+  (println (str "no " isic-file " -- run scripts/gen-isic.cljk. "
                 "Refusing to report a pass on an authority I could not read."))
   (js/process.exit 2))
 

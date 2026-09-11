@@ -27,7 +27,7 @@
 
 (def ^:private script-index
   ;; nbb は ESM で走るので __filename が無く、**argv[2] でもない** ——
-  ;; `nbb --classpath X bin/eigyo.cljs cells` では argv[2] が `--classpath` に
+  ;; `nbb --classpath X bin/eigyo.cljk cells` では argv[2] が `--classpath` に
   ;; なる（実測 2026-08-27、この形で全コマンドが usage を出していた）。
   ;; スクリプトは『最初の .cljs で終わる引数』として探す。
   (or (first (keep-indexed (fn [i a] (when (str/ends-with? a ".cljs") i)) argv))
@@ -336,7 +336,7 @@
                        {:file "eigyo_segment.json" :table "eigyo_segment" :int_columns []}]}]
     (when-not (isic-classes)
       (println "WARNING: data/isic.edn is absent -- isic_revision will be 'unverified' on every row."
-               "Run scripts/gen-isic.cljs."))
+               "Run scripts/gen-isic.cljk."))
     (when-not bps
       (println "WARNING: data/blueprints.edn is absent -- blueprint_repo will be empty on every row."
                "That is 'not matched', not 'no blueprint exists'."))

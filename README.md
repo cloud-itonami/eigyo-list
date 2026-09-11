@@ -79,7 +79,7 @@ Overpass が絞り、1 区画 10 分〜502 になった。**粘らずに止め�
 ## 常駐（1 日 7 区画）
 
 ```bash
-nbb --classpath "$CP" bin/resident.cljs --check   # 何をするかだけ見る（収集しない）
+nbb --classpath "$CP" bin/resident.cljk --check   # 何をするかだけ見る（収集しない）
 cp ops/cloud.itonami.eigyo-list-tick.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/cloud.itonami.eigyo-list-tick.plist
 tail -40 /tmp/eigyo-list-tick.log
@@ -107,14 +107,14 @@ blueprint が在ることは別の主張**なので、列を分けてある。
 ```bash
 CP="src:../../kotoba-lang/org-openstreetmap-overpass/src"
 
-nbb --classpath "$CP" bin/eigyo.cljs cells      # 区画の宣言と、いま何が測れているか
-nbb --classpath "$CP" bin/eigyo.cljs harvest --cell gb-london-city
-nbb --classpath "$CP" bin/eigyo.cljs stats      # 手元の名簿を数える
-nbb --classpath "$CP" bin/eigyo.cljs export --out-dir /tmp
-FLEET_ROOT=<superproject> nbb --classpath "$CP" bin/eigyo.cljs sync --out-dir /tmp
+nbb --classpath "$CP" bin/eigyo.cljk cells      # 区画の宣言と、いま何が測れているか
+nbb --classpath "$CP" bin/eigyo.cljk harvest --cell gb-london-city
+nbb --classpath "$CP" bin/eigyo.cljk stats      # 手元の名簿を数える
+nbb --classpath "$CP" bin/eigyo.cljk export --out-dir /tmp
+FLEET_ROOT=<superproject> nbb --classpath "$CP" bin/eigyo.cljk sync --out-dir /tmp
 
-nbb --classpath "src:test:../../kotoba-lang/org-openstreetmap-overpass/src" run_tests.cljs
-FLEET_ROOT=<superproject> nbb scripts/gen-blueprints.cljs --check
+nbb --classpath "src:test:../../kotoba-lang/org-openstreetmap-overpass/src" run_tests.cljk
+FLEET_ROOT=<superproject> nbb scripts/gen-blueprints.cljk --check
 ```
 
 `harvest` の exit code は **0 / 1 / 2**。2 は「区画を読めなかった」で、
@@ -129,7 +129,7 @@ Iceberg の commit を書く 2 本目を持たない。
 宣言しているか、両方か**を持つ。行の `isic_revision` はそれをそのまま言う。
 
 ```bash
-nbb --classpath src scripts/verify-crosswalk.cljs   # 0 全符号が実在 / 1 実在しない符号 / 2 権威を読めなかった
+nbb --classpath src scripts/verify-crosswalk.cljk   # 0 全符号が実在 / 1 実在しない符号 / 2 権威を読めなかった
 ```
 
 **どちらの版にも無い符号を表に置かない。** 置くと、その符号のリードは
@@ -162,7 +162,7 @@ OSM では建物の way とその中の POI node が両方 tag を持つこと�
 
 ## 分類は表であって推測ではない
 
-`src/eigyo_list/crosswalk.cljc` が OSM のタグ → ISIC を**表として**持つ。
+`src/eigyo_list/crosswalk.cljk` が OSM のタグ → ISIC を**表として**持つ。
 `shop` / `craft` / `office` / `healthcare` は**キー存在形**で引き（表に無い値も
 返らせて数える）、`amenity` / `tourism` / `leisure` は**表の値だけ**に絞る
 （ベンチもゴミ箱も `amenity` なので）。
