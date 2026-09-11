@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns eigyo
   "eigyo-list の唯一の外に出る場所。
 
@@ -27,7 +27,7 @@
 
 (def ^:private script-index
   ;; nbb は ESM で走るので __filename が無く、**argv[2] でもない** ——
-  ;; `nbb --classpath X bin/eigyo.cljk cells` では argv[2] が `--classpath` に
+  ;; `kbb --backend sci --classpath X bin/eigyo.cljk cells` では argv[2] が `--classpath` に
   ;; なる（実測 2026-08-27、この形で全コマンドが usage を出していた）。
   ;; スクリプトは『最初の .cljs で終わる引数』として探す。
   (or (first (keep-indexed (fn [i a] (when (str/ends-with? a ".cljs") i)) argv))

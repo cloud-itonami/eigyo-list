@@ -1,8 +1,8 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns resident
   "常駐の 1 日ぶん —— いちばん古い区画を引き直し、3 表を lake に載せ直す。
 
-    nbb --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljk
+    kbb --backend sci --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljk
 
   launchd が 1 日 1 回呼ぶ（`ops/cloud.itonami.eigyo-list-tick.plist`）。
 
