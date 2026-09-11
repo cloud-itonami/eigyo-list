@@ -4,7 +4,7 @@
   cloud.itonami.eigyo-list-tick — 1 日ぶんの収集と、3 表の載せ直し。
 
   1 日 1 回、いちばん古い 12 区画だけを引き直す（127 区画なので再訪は約 11 日）。
-  毎日 48 区画を舐めない理由と、exit 2 の扱いは bin/resident.cljs の docstring に
+  毎日 48 区画を舐めない理由と、exit 2 の扱いは bin/resident.cljk の docstring に
   1 箇所だけ置いてある。**この plist に判断を書かない** —— launchctl は編集の
   たびに bootout/bootstrap が要るので、判断を持つ plist は誰も直さない。
 
@@ -25,7 +25,7 @@
   <array>
     <string>/bin/zsh</string>
     <string>-lc</string>
-    <string>cd /Users/junkawasaki/github/com-junkawasaki/orgs/cloud-itonami/eigyo-list &amp;&amp; exec /opt/homebrew/bin/nbb --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljs</string>
+    <string>cd /Users/junkawasaki/github/com-junkawasaki/orgs/cloud-itonami/eigyo-list &amp;&amp; exec /opt/homebrew/bin/nbb --classpath src:../../kotoba-lang/org-openstreetmap-overpass/src bin/resident.cljk</string>
   </array>
 
   <!-- 05:40。fleet の朝の job（09:20 の loop-noren 等）と重ねない。 -->

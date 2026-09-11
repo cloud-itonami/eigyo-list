@@ -55,7 +55,7 @@
                                                    :title (get-in rev5 [c "nameEn"]))
                          (contains? mirror c) (assoc :rev4-mirror? true
                                                      :mirror-title (mirror-title c)))]))
-      data {:generated-by "scripts/gen-isic.cljs"
+      data {:generated-by "scripts/gen-isic.cljk"
             :source "cloud-itonami/org-un-isic"
             :source-pin (pin)
             :rev5-note "公式 CSV から生成、sha256 で pin 済み（org-un-isic data/rev5/upstream.edn）"

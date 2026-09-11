@@ -23,7 +23,7 @@
   ISIC の 4 桁 class。**版は符号ごとに違う** —— `data/isic.edn`（org-un-isic
   から生成）が、その符号を pin 済みの Rev.5 が宣言しているか、係争中の Rev.4
   mirror が宣言しているか、両方かを持つ。**どちらにも無い符号は表に置けない**
-  （`scripts/verify-crosswalk.cljs` が落とす）。
+  （`scripts/verify-crosswalk.cljk` が落とす）。
 
   版をまたいだ対応表は作らない —— UN が publish しておらず、org-un-isic は
   「Rev.5 の符号を Rev.4 に写して解決済みと呼ぶな」と明記している。

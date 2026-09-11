@@ -22,7 +22,7 @@
                  (keep #(second (re-find #"name:\s*cloud-itonami-isic-([0-9]+)\s*$" %)))
                  (into (sorted-set)))
       check? (some #{"--check"} (vec js/process.argv))
-      data {:generated-by "scripts/gen-blueprints.cljs"
+      data {:generated-by "scripts/gen-blueprints.cljk"
             :source "com-junkawasaki/root manifest/west.yml"
             :note "cloud-itonami が blueprint repo を持つ ISIC 符号。手で編集しない。"
             :count (count codes)
