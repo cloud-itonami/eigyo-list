@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns gen-isic
   "ISIC の権威から `data/isic.edn` を作る。**生成物。手で編集しない。**
 

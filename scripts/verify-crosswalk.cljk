@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns verify-crosswalk
   "分類表の全符号を ISIC の権威に当てる。
 

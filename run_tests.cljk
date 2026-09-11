@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns run-tests
   "純粋なテストと、**権威に当てる検査**の両方。
 

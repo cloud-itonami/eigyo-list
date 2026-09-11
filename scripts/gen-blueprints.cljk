@@ -1,4 +1,4 @@
-#!/usr/bin/env nbb
+#!/usr/bin/env kbb
 (ns gen-blueprints
   "west.yml → `data/blueprints.edn`（cloud-itonami が blueprint repo を持つ ISIC 符号）。
 
