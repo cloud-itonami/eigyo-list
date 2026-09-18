@@ -11,8 +11,8 @@
             [eigyo-list.core-test]))
 
 (defn- verify-crosswalk! []
-  (let [root (path/dirname (or (first (filter #(re-find #"run_tests\.cljs$" %) (vec js/process.argv))) "."))
-        r (cp/spawnSync "nbb" #js ["--classpath" "src" (path/join root "scripts" "verify-crosswalk.cljs")]
+  (let [root (path/dirname (or (first (filter #(re-find #"run_tests\.cljk$" %) (vec js/process.argv))) "."))
+        r (cp/spawnSync "kbb" #js ["--backend" "sci" "--classpath" "src" (path/join root "scripts" "verify-crosswalk.cljk")]
                         #js {:stdio "inherit" :cwd root})]
     (.-status r)))
 
