@@ -1,5 +1,5 @@
 (ns eigyo-list.core-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [kotoba.lang.text :as str]
             [eigyo-list.crosswalk :as cw]
             [eigyo-list.lead :as lead]
