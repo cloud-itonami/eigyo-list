@@ -5,7 +5,7 @@
   分類表の符号が ISIC のどの版にも無い、という欠陥は unit test では捕まらない
   （表の中で閉じている限り整合しているから）。外の権威に当てて初めて分かるので、
   ここで一緒に走らせる —— 別コマンドにすると、走らせるのを忘れる。"
-  (:require [clojure.test :as t]
+  (:require [kotoba.test :as t]
             ["child_process" :as cp]
             ["path" :as path]
             [eigyo-list.core-test]))
